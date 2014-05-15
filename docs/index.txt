@@ -285,37 +285,9 @@ g.V().has("name","marko")
 The expression above can be executed in a `O(|V|)` or `O(log(|V|)` fashion in TinkerGraph depending on whether there is or is not an index defined for "name."
 
 [source,java]
-public class TinkerGraphStepOptimizer implements Optimizer.FinalOptimizer {
-    public void optimize(final Traversal traversal) {
-        if (traversal.getSteps().get(0) instanceof TinkerGraphStep) {
-            final TinkerGraphStep tinkerGraphStep
-                = (TinkerGraphStep) traversal.getSteps().get(0);
-            Step currentStep = tinkerGraphStep.getNextStep();
-            while (true) {
-                if (currentStep == EmptyStep.instance()
-                    || TraversalHelper.isLabeled(currentStep)) 
-                    break;
-                if (currentStep instanceof HasStep) {
-                    tinkerGraphStep.hasContainers.add(
-                        ((HasStep) currentStep).hasContainer);
-                    TraversalHelper.removeStep(currentStep, traversal);
-                } else if (currentStep instanceof IntervalStep) {
-                    tinkerGraphStep.hasContainers.add(
-                        ((IntervalStep) currentStep).startContainer);
-                    tinkerGraphStep.hasContainers.add(
-                        ((IntervalStep) currentStep).endContainer);
-                    TraversalHelper.removeStep(currentStep, traversal);
-                } else if (currentStep instanceof IdentityStep) {
-                    // do nothing
-                } else {
-                    break;
-                }
-                currentStep = currentStep.getNextStep();
-            }
-            tinkerGraphStep.generateHolderIterator(false);
-        }
-    }
-}
+----------------------------
+include::tinkergraph-gremlin/src/main/java/com/tinkerpop/gremlin/tinkergraph/process/graph/util/optimizers/TinkerGraphStepOptimizer.java[method=void optimize(Traversal)]
+----------------------------
 
 The traversal is redefined by simply taking an chain of `has()`-steps and `interval()`-steps after `g.V()` (`TinkerGraphStep`) and providing them to `TinkerGraphStep`. Then its up to TinkerGraphStep to determine if an appropriate index exists. In the code below, review `vertices()` and note how if an index exists, for a particular `HasContainer`, then that index is first queried before the remaining `HasContainer` filters are serially applied.
 

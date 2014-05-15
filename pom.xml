@@ -294,7 +294,12 @@
                 <plugin>
                    <groupId>org.asciidoctor</groupId>
                    <artifactId>asciidoctor-maven-plugin</artifactId>
-                   <version>0.1.4</version>
+                   <version>1.5.0-SNAPSHOT</version>
+                </plugin>
+                <plugin>
+                    <groupId>asciidoctorj-extensions</groupId>
+                    <artifactId>java-semantic-asciidoctorj-extensions</artifactId>
+                    <version>0.3.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
@@ -526,6 +531,13 @@
                                 </configuration>
                             </execution>
                         </executions>
+                        <dependencies>
+                            <dependency>
+                                <groupId>asciidoctorj-extensions</groupId>
+                                <artifactId>java-semantic-asciidoctorj-extensions</artifactId>
+                                <version>0.4.0-SNAPSHOT</version>
+                            </dependency>
+                        </dependencies>
                     </plugin>
                     <plugin>
                         <artifactId>maven-resources-plugin</artifactId>
@@ -553,4 +565,17 @@
             </build>
         </profile>
     </profiles>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>bintray</id>
+            <name>bintray</name>
+            <snapshots>
+                <enabled>true</enabled> <!-- temporarily enabled until 1.5.0 asciidoc-maven-plugin is here -->
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <url>http://dl.bintray.com/lordofthejars/maven/</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
