@@ -13,11 +13,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Future;
 
-import static com.tinkerpop.gremlin.structure.Graph.Features.AnnotationFeatures.FEATURE_ANNOTATIONS;
 import static com.tinkerpop.gremlin.structure.Graph.Features.GraphFeatures.FEATURE_COMPUTER;
 import static com.tinkerpop.gremlin.structure.Graph.Features.GraphFeatures.FEATURE_TRANSACTIONS;
 import static com.tinkerpop.gremlin.structure.Graph.Features.PropertyFeatures.FEATURE_PROPERTIES;
@@ -170,7 +171,7 @@ public class ExceptionConsistencyTest {
         public void testGraphVertexSetPropertyStandard() throws Exception {
             try {
                 final Vertex v = this.g.addVertex();
-                v.setProperty(key, val);
+                v.property(key, val);
                 fail(String.format("Call to Vertex.setProperty should have thrown an exception with these arguments [%s, %s]", key, val));
             } catch (Exception ex) {
                 assertEquals(expectedException.getClass(), ex.getClass());
@@ -183,7 +184,7 @@ public class ExceptionConsistencyTest {
         public void testGraphEdgeSetPropertyStandard() throws Exception {
             try {
                 final Vertex v = this.g.addVertex();
-                v.addEdge("label", v).setProperty(key, val);
+                v.addEdge("label", v).property(key, val);
                 fail(String.format("Call to Edge.setProperty should have thrown an exception with these arguments [%s, %s]", key, val));
             } catch (Exception ex) {
                 assertEquals(expectedException.getClass(), ex.getClass());
@@ -234,28 +235,6 @@ public class ExceptionConsistencyTest {
     }
 
     /**
-     * Test exceptions around use of {@link com.tinkerpop.gremlin.structure.Direction} with the incorrect context.
-     */
-    @ExceptionCoverage(exceptionClass = Element.Exceptions.class, methods = {
-            "bothIsNotSupported"
-    })
-    public static class UseOfDirectionTest extends AbstractGremlinTest {
-        @Test
-        public void testGetVertexOnEdge() {
-            final Vertex v = g.addVertex();
-            try {
-                v.addEdge("label", v).getVertex(Direction.BOTH);
-                fail("Call to Edge.getVertex(BOTH) should throw an exception");
-            } catch (Exception ex) {
-                final Exception expectedException = Element.Exceptions.bothIsNotSupported();
-                assertEquals(expectedException.getClass(), ex.getClass());
-                assertEquals(expectedException.getMessage(), ex.getMessage());
-            }
-
-        }
-    }
-
-    /**
      * Test exceptions around {@link com.tinkerpop.gremlin.structure.Graph.Variables}.
      */
     @RunWith(Parameterized.class)
@@ -288,60 +267,6 @@ public class ExceptionConsistencyTest {
             try {
                 g.variables().set(key, val);
                 fail(String.format("Setting an annotation with these arguments [key: %s value: %s] should throw an exception", key, val));
-            } catch (Exception ex) {
-                assertEquals(expectedException.getClass(), ex.getClass());
-                assertEquals(expectedException.getMessage(), ex.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Tests for exceptions with {@link com.tinkerpop.gremlin.structure.AnnotatedValue}.
-     */
-    @RunWith(Parameterized.class)
-    @ExceptionCoverage(exceptionClass = AnnotatedValue.Exceptions.class, methods = {
-            "providedKeyValuesMustBeAMultipleOfTwo",
-            "providedKeyValuesMustHaveAStringOnEvenIndices",
-            "annotationValueCanNotBeNull",
-            "annotationKeyValueIsReserved",
-            "annotationKeyCanNotBeEmpty",
-            "annotationKeyCanNotBeNull",
-            "annotatedValueCanNotBeNull"
-    })
-    public static class AnnotatedValueTest extends AbstractGremlinTest {
-
-        @Parameterized.Parameters(name = "{index}: expect - {0},{1}")
-        public static Iterable<Object[]> data() {
-            return Arrays.asList(new Object[][]{
-                    {null, new Object[]{"good", "odd", "number", "arguments"}, AnnotatedValue.Exceptions.annotatedValueCanNotBeNull()},
-                    {"something", new Object[]{"odd", "number", "arguments"}, AnnotatedValue.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()},
-                    {"something", new Object[]{"odd"}, AnnotatedValue.Exceptions.providedKeyValuesMustBeAMultipleOfTwo()},
-                    {"something", new Object[]{"odd", "number", 123, "test"}, AnnotatedValue.Exceptions.providedKeyValuesMustHaveAStringOnEvenIndices()},
-                    {"something", new Object[]{"odd", null}, AnnotatedValue.Exceptions.annotationValueCanNotBeNull()},
-                    {"something", new Object[]{null, "val"}, AnnotatedValue.Exceptions.providedKeyValuesMustHaveAStringOnEvenIndices()},
-                    {"something", new Object[]{(String) null, "val"}, AnnotatedValue.Exceptions.providedKeyValuesMustHaveAStringOnEvenIndices()},
-                    {"something", new Object[]{AnnotatedValue.VALUE, "v"}, AnnotatedValue.Exceptions.annotationKeyValueIsReserved()},
-                    {"something", new Object[]{"", "val"}, AnnotatedValue.Exceptions.annotationKeyCanNotBeEmpty()}});
-        }
-
-        @Parameterized.Parameter(value = 0)
-        public String annotatedValue;
-
-        @Parameterized.Parameter(value = 1)
-        public Object[] arguments;
-
-        @Parameterized.Parameter(value = 2)
-        public Exception expectedException;
-
-        @Test
-        @FeatureRequirement(featureClass = Graph.Features.VertexAnnotationFeatures.class, feature = FEATURE_ANNOTATIONS)
-        public void testAnnotatedListAddValue() throws Exception {
-            try {
-                final Vertex v = this.g.addVertex();
-                v.setProperty("names", AnnotatedList.make());
-                final Property<AnnotatedList<String>> names = v.getProperty("names");
-                names.get().addValue(annotatedValue, arguments);
-                fail(String.format("Call to addValue should have thrown an exception with these arguments [%s]", arguments));
             } catch (Exception ex) {
                 assertEquals(expectedException.getClass(), ex.getClass());
                 assertEquals(expectedException.getMessage(), ex.getMessage());
@@ -558,7 +483,7 @@ public class ExceptionConsistencyTest {
     }
 
     /**
-     * Test exceptions around use of {@link com.tinkerpop.gremlin.structure.Element#getValue(String)}.
+     * Test exceptions around use of {@link com.tinkerpop.gremlin.structure.Element#value(String)}.
      */
     @ExceptionCoverage(exceptionClass = Property.Exceptions.class, methods = {
             "propertyDoesNotExist"
@@ -569,8 +494,8 @@ public class ExceptionConsistencyTest {
         public void testGetValueThatIsNotPresentOnVertex() {
             final Vertex v = g.addVertex();
             try {
-                v.getValue("does-not-exist");
-                fail("Call to Element.getValue() with a key that is not present should throw an exception");
+                v.value("does-not-exist");
+                fail("Call to Element.value() with a key that is not present should throw an exception");
             } catch (Exception ex) {
                 final Exception expectedException = Property.Exceptions.propertyDoesNotExist("does-not-exist");
                 assertEquals(expectedException.getClass(), ex.getClass());
@@ -585,8 +510,8 @@ public class ExceptionConsistencyTest {
             final Vertex v = g.addVertex();
             final Edge e = v.addEdge("label", v);
             try {
-                e.getValue("does-not-exist");
-                fail("Call to Element.getValue() with a key that is not present should throw an exception");
+                e.value("does-not-exist");
+                fail("Call to Element.value() with a key that is not present should throw an exception");
             } catch (Exception ex) {
                 final Exception expectedException = Property.Exceptions.propertyDoesNotExist("does-not-exist");
                 assertEquals(expectedException.getClass(), ex.getClass());
@@ -611,7 +536,7 @@ public class ExceptionConsistencyTest {
 
             assertNotNull(e);
 
-            final Object id = e.getId();
+            final Object id = e.id();
             e.remove();
             assertFalse(g.E().has(Element.ID, id).hasNext());
 
@@ -635,7 +560,7 @@ public class ExceptionConsistencyTest {
             final Edge e = v1.addEdge("knows", v2);
             assertNotNull(e);
 
-            final Object id = e.getId();
+            final Object id = e.id();
             e.remove();
 
             // try second remove with a commit and then a second remove.  both should return the same exception
@@ -658,7 +583,7 @@ public class ExceptionConsistencyTest {
             final Vertex v = g.addVertex();
             assertNotNull(v);
 
-            final Object id = v.getId();
+            final Object id = v.id();
             v.remove();
             assertFalse(g.V().has(Element.ID, id).hasNext());
 
@@ -680,7 +605,7 @@ public class ExceptionConsistencyTest {
             final Vertex v = g.addVertex();
             assertNotNull(v);
 
-            final Object id = v.getId();
+            final Object id = v.id();
             v.remove();
 
             tryCommit(g);
@@ -781,17 +706,22 @@ public class ExceptionConsistencyTest {
         }
 
         @Override
-        public void setup(final GraphComputer.SideEffects sideEffects) {
+        public void setup(final GraphComputer.Globals globals) {
         }
 
         @Override
-        public void execute(final Vertex vertex, final Messenger messenger, final GraphComputer.SideEffects sideEffects) {
-            vertex.setProperty(this.key, this.val);
+        public void execute(final Vertex vertex, final Messenger messenger, final GraphComputer.Globals globals) {
+            vertex.property(this.key, this.val);
         }
 
         @Override
-        public boolean terminate(GraphComputer.SideEffects sideEffects) {
+        public boolean terminate(GraphComputer.Globals globals) {
             return true;
+        }
+
+        @Override
+        public Set<String> getGlobalKeys() {
+            return Collections.emptySet();
         }
 
         @Override
@@ -823,17 +753,22 @@ public class ExceptionConsistencyTest {
         }
 
         @Override
-        public void setup(final GraphComputer.SideEffects sideEffects) {
+        public void setup(final GraphComputer.Globals globals) {
         }
 
         @Override
-        public void execute(final Vertex vertex, final Messenger messenger, final GraphComputer.SideEffects sideEffects) {
-            vertex.bothE().forEach(e -> e.setProperty(this.key, this.val));
+        public void execute(final Vertex vertex, final Messenger messenger, final GraphComputer.Globals globals) {
+            vertex.bothE().forEach(e -> e.property(this.key, this.val));
         }
 
         @Override
-        public boolean terminate(GraphComputer.SideEffects sideEffects) {
+        public boolean terminate(GraphComputer.Globals globals) {
             return true;
+        }
+
+        @Override
+        public Set<String> getGlobalKeys() {
+            return Collections.emptySet();
         }
 
         @Override

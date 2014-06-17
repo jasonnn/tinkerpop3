@@ -29,24 +29,24 @@ abstract class TinkerElement implements Element, Serializable {
         return this.id.hashCode();
     }
 
-    public Object getId() {
+    public Object id() {
         return this.id;
     }
 
-    public String getLabel() {
+    public String label() {
         return this.label;
     }
 
-    public Map<String, Property> getHiddens() {
+    public Map<String, Property> hiddens() {
         final Map<String, Property> temp = new HashMap<>();
         this.properties.forEach((key, property) -> {
             if (key.startsWith(Graph.HIDDEN_PREFIX))
-                temp.put(key, property);
+                temp.put(ElementHelper.removeHiddenPrefix(key), property);
         });
         return temp;
     }
 
-    public Map<String, Property> getProperties() {
+    public Map<String, Property> properties() {
         final Map<String, Property> temp = new HashMap<>();
         this.properties.forEach((key, property) -> {
             if (!key.startsWith(Graph.HIDDEN_PREFIX))
@@ -56,7 +56,7 @@ abstract class TinkerElement implements Element, Serializable {
     }
 
 
-    public <V> Property<V> getProperty(final String key) {
+    public <V> Property<V> property(final String key) {
         if (this.graph.useGraphView) {
             return this.graph.graphView.getProperty(this, key);
         } else {

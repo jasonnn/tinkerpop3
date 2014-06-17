@@ -19,16 +19,16 @@ public class PageRankVertexProgramTest extends AbstractGremlinTest {
     @Test
     @LoadGraphWith(CLASSIC)
     public void testPageRank() throws Exception {
-        final Pair<Graph, GraphComputer.SideEffects> pair = g.compute().program(PageRankVertexProgram.create().getConfiguration()).submit().get();
+        final Pair<Graph, GraphComputer.Globals> pair = g.compute().program(PageRankVertexProgram.create().getConfiguration()).submit().get();
         final Graph viewGraph = pair.getValue0();
-        final GraphComputer.SideEffects sideEffects = pair.getValue1();
+        final GraphComputer.Globals globals = pair.getValue1();
         viewGraph.V().forEach(v -> {
-            assertTrue(v.getPropertyKeys().contains("name"));
+            assertTrue(v.keys().contains("name"));
             // TODO: Broken in TinkerGraph
-            // assertTrue(v.getPropertyKeys().contains(PageRankVertexProgram.PAGE_RANK));
-            System.out.println(v.getValue("name") + ":" + v.getValue(PageRankVertexProgram.PAGE_RANK));
-            final String name = v.getValue("name");
-            final Double pageRank = v.getValue(PageRankVertexProgram.PAGE_RANK);
+            // assertTrue(v.keys().contains(PageRankVertexProgram.PAGE_RANK));
+            System.out.println(v.value("name") + ":" + v.value(PageRankVertexProgram.PAGE_RANK));
+            final String name = v.value("name");
+            final Double pageRank = v.value(PageRankVertexProgram.PAGE_RANK);
             if (name.equals("marko"))
                 assertTrue(pageRank > 0.14 && pageRank < 0.16);
             else if (name.equals("vadas"))
@@ -44,7 +44,7 @@ public class PageRankVertexProgramTest extends AbstractGremlinTest {
             else
                 throw new IllegalStateException("The following vertex should not exist in the graph: " + name);
         });
-        assertEquals(sideEffects.getIteration(), 30);
+        assertEquals(globals.getIteration(), 30);
     }
 
 }

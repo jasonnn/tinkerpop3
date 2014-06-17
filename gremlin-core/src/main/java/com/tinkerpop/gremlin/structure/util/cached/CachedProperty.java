@@ -33,8 +33,8 @@ public class CachedProperty<V> implements Property, Serializable {
     public CachedProperty(final Property property) {
         if (null == property) throw Graph.Exceptions.argumentCanNotBeNull("property");
 
-        this.key = property.getKey();
-        this.value = (V) property.get();
+        this.key = property.key();
+        this.value = (V) property.value();
         this.hashCode = property.hashCode();
         final Element ele = property.getElement();
         if (ele instanceof Vertex)
@@ -47,11 +47,15 @@ public class CachedProperty<V> implements Property, Serializable {
         return true;
     }
 
-    public String getKey() {
-        return this.key;
+    public boolean isHidden() {
+        return this.key.startsWith(Graph.HIDDEN_PREFIX);
     }
 
-    public V get() {
+    public String key() {
+        return ElementHelper.removeHiddenPrefix(this.key);
+    }
+
+    public V value() {
         return this.value;
     }
 

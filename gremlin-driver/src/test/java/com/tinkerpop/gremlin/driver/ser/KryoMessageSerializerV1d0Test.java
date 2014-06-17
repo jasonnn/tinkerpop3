@@ -4,17 +4,12 @@ import com.tinkerpop.gremlin.driver.MessageSerializer;
 import com.tinkerpop.gremlin.driver.message.ResponseMessage;
 import com.tinkerpop.gremlin.driver.message.ResultCode;
 import com.tinkerpop.gremlin.driver.message.ResultType;
-import com.tinkerpop.gremlin.structure.AnnotatedList;
-import com.tinkerpop.gremlin.structure.AnnotatedValue;
 import com.tinkerpop.gremlin.structure.Compare;
-import com.tinkerpop.gremlin.structure.Direction;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Vertex;
-import com.tinkerpop.gremlin.structure.util.cached.CachedAnnotatedList;
-import com.tinkerpop.gremlin.structure.util.cached.CachedAnnotatedValue;
 import com.tinkerpop.gremlin.structure.util.cached.CachedEdge;
 import com.tinkerpop.gremlin.structure.util.cached.CachedVertex;
 import com.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory;
@@ -106,7 +101,7 @@ public class KryoMessageSerializerV1d0Test {
         final Vertex v1 = g.addVertex();
         final Vertex v2 = g.addVertex();
         final Edge e = v1.addEdge("test", v2);
-        e.setProperty("abc", 123);
+        e.property("abc", 123);
 
         final Iterable<Edge> iterable = g.E().toList();
 
@@ -117,15 +112,15 @@ public class KryoMessageSerializerV1d0Test {
         assertEquals(1, edgeList.size());
 
         final CachedEdge deserialiedEdge = edgeList.get(0);
-        assertEquals(2l, deserialiedEdge.getId());
-        assertEquals("test", deserialiedEdge.getLabel());
+        assertEquals(2l, deserialiedEdge.id());
+        assertEquals("test", deserialiedEdge.label());
 
-        assertEquals(new Integer(123), (Integer) deserialiedEdge.getValue("abc"));
-        assertEquals(1, deserialiedEdge.getProperties().size());
-        assertEquals(0l, deserialiedEdge.getVertex(Direction.OUT).getId());
-        assertEquals(Element.DEFAULT_LABEL, deserialiedEdge.getVertex(Direction.OUT).getLabel());
-        assertEquals(1l, deserialiedEdge.getVertex(Direction.IN).getId());
-        assertEquals(Element.DEFAULT_LABEL, deserialiedEdge.getVertex(Direction.IN).getLabel());
+        assertEquals(new Integer(123), (Integer) deserialiedEdge.value("abc"));
+        assertEquals(1, deserialiedEdge.properties().size());
+        assertEquals(0l, deserialiedEdge.outV().id().next());
+        assertEquals(Vertex.DEFAULT_LABEL, deserialiedEdge.outV().label().next());
+        assertEquals(1l, deserialiedEdge.inV().id().next());
+        assertEquals(Vertex.DEFAULT_LABEL, deserialiedEdge.inV().label().next());
     }
 
     @Test
@@ -141,7 +136,7 @@ public class KryoMessageSerializerV1d0Test {
         friends.add(5);
         friends.add(map);
 
-        v.setProperty("friends", friends);
+        v.property("friends", friends);
 
         final List list = g.V().toList();
 
@@ -152,13 +147,13 @@ public class KryoMessageSerializerV1d0Test {
         assertEquals(1, vertexList.size());
 
         final CachedVertex deserializedVertex = vertexList.get(0);
-        assertEquals(0l, deserializedVertex.getId());
-        assertEquals(Element.DEFAULT_LABEL, deserializedVertex.getLabel());
+        assertEquals(0l, deserializedVertex.id());
+        assertEquals(Vertex.DEFAULT_LABEL, deserializedVertex.label());
 
-        final Map<String,Property> properties = deserializedVertex.getProperties();
+        final Map<String,Property> properties = deserializedVertex.properties();
         assertEquals(1, properties.size());
 
-        final List<Object> deserializedInnerList = (List<Object>) properties.get("friends").get();
+        final List<Object> deserializedInnerList = (List<Object>) properties.get("friends").value();
         assertEquals(3, deserializedInnerList.size());
         assertEquals("x", deserializedInnerList.get(0));
         assertEquals(5, deserializedInnerList.get(1));
@@ -182,98 +177,13 @@ public class KryoMessageSerializerV1d0Test {
         assertEquals(1, deserializedMap.size());
 
         final Vertex deserializedMarko = deserializedMap.keySet().iterator().next();
-        assertEquals("marko", deserializedMarko.getValue("name").toString());
-        assertEquals(1, deserializedMarko.getId());
-        assertEquals(Element.DEFAULT_LABEL, deserializedMarko.getLabel());
-        assertEquals(new Integer(29), (Integer) deserializedMarko.getValue("age"));
-        assertEquals(2, deserializedMarko.getProperties().size());
+        assertEquals("marko", deserializedMarko.value("name").toString());
+        assertEquals(1, deserializedMarko.id());
+        assertEquals(Vertex.DEFAULT_LABEL, deserializedMarko.label());
+        assertEquals(new Integer(29), (Integer) deserializedMarko.value("age"));
+        assertEquals(2, deserializedMarko.properties().size());
 
         assertEquals(new Integer(1000), deserializedMap.values().iterator().next());
-    }
-
-    @Test
-    public void serializeVertexWithAnnotatedList() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final Vertex v = g.v(1);
-
-        final ResponseMessage response = convert(v);
-        assertCommon(response);
-
-        final CachedVertex deserializedVertex = (CachedVertex) response.getResult();
-        assertEquals(1, deserializedVertex.getId());
-        assertEquals("person", deserializedVertex.getLabel());
-
-        final Map<String,Property> properties = deserializedVertex.getProperties();
-        assertEquals(2, properties.size());
-        assertEquals("marko", deserializedVertex.<String>getValue("name"));
-
-        final AnnotatedList<String> list = deserializedVertex.getValue("locations");
-        assertEquals(4, list.values().count());
-
-        list.annotatedValues().toList().forEach(av -> {
-            if (av.getValue().equals("san diego")) {
-                assertEquals(1997, av.getAnnotation("startTime").get());
-                assertEquals(2001, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("santa cruz")) {
-                assertEquals(2001, av.getAnnotation("startTime").get());
-                assertEquals(2004, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("brussels")) {
-                assertEquals(2004, av.getAnnotation("startTime").get());
-                assertEquals(2005, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("santa fe")) {
-                assertEquals(2005, av.getAnnotation("startTime").get());
-                assertEquals(2014, av.getAnnotation("endTime").get());
-            }
-
-            assertEquals(2, av.getAnnotationKeys().size());
-        });
-    }
-
-    @Test
-    public void serializeAnnotatedList() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final AnnotatedList<String> al = g.v(1).getValue("locations");
-
-        final ResponseMessage response = convert(al);
-        assertCommon(response);
-
-        final CachedAnnotatedList<String> deserializedList = (CachedAnnotatedList<String>) response.getResult();
-        assertEquals(4, deserializedList.values().count());
-
-        deserializedList.annotatedValues().toList().forEach(av -> {
-            if (av.getValue().equals("san diego")) {
-                assertEquals(1997, av.getAnnotation("startTime").get());
-                assertEquals(2001, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("santa cruz")) {
-                assertEquals(2001, av.getAnnotation("startTime").get());
-                assertEquals(2004, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("brussels")) {
-                assertEquals(2004, av.getAnnotation("startTime").get());
-                assertEquals(2005, av.getAnnotation("endTime").get());
-            } else if (av.getValue().equals("santa fe")) {
-                assertEquals(2005, av.getAnnotation("startTime").get());
-                assertEquals(2014, av.getAnnotation("endTime").get());
-            }
-
-            assertEquals(2, av.getAnnotationKeys().size());
-        });
-    }
-
-    @Test
-    public void serializeAnnotatedValue() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final AnnotatedList<String> al = g.v(1).getValue("locations");
-        final AnnotatedValue<String> annotatedValue = al.annotatedValues().next();
-
-        final ResponseMessage response = convert(annotatedValue);
-        assertCommon(response);
-
-        final CachedAnnotatedValue<String> av = (CachedAnnotatedValue<String>) response.getResult();
-
-        assertEquals("san diego", av.getValue());
-        assertEquals(1997, av.getAnnotation("startTime").get());
-        assertEquals(2001, av.getAnnotation("endTime").get());
-        assertEquals(2, av.getAnnotationKeys().size());
     }
 
     private void assertCommon(final ResponseMessage response) {

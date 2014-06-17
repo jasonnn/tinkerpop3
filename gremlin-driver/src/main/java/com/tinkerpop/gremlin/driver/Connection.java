@@ -72,8 +72,9 @@ class Connection {
 
             logger.info("Created new connection for {}", uri);
         } catch (InterruptedException ie) {
-            ie.printStackTrace();
-            throw new RuntimeException(ie);
+			logger.debug("Error opening connection on {}", uri);
+
+			throw new RuntimeException(ie);
         }
     }
 
@@ -86,7 +87,6 @@ class Connection {
     }
 
     public boolean isDead() {
-        // todo: what is being signalled here?
         return isDead;
     }
 
@@ -124,22 +124,29 @@ class Connection {
     }
 
     public ChannelPromise write(final RequestMessage requestMessage, final CompletableFuture<ResultSet> future) {
-        // once there is a completed write, then create a holder for the result set and complete
+        // once there is a completed write, then create a traverser for the result set and complete
         // the promise so that the client knows that that it can start checking for results.
         final Connection thisConnection = this;
         final ChannelPromise promise = channel.newPromise()
                 .addListener(f -> {
-                    final LinkedBlockingQueue<ResponseMessage> responseQueue = new LinkedBlockingQueue<>();
-                    final CompletableFuture<Void> readCompleted = new CompletableFuture<>();
-                    readCompleted.thenAcceptAsync(v -> {
-                        thisConnection.returnToPool();
-                        if (isClosed() && pending.isEmpty())
-                            shutdown(closeFuture.get());
-                    });
-                    final ResponseQueue handler = new ResponseQueue(responseQueue, readCompleted);
-                    pending.put(requestMessage.getRequestId(), handler);
-                    final ResultSet resultSet = new ResultSet(handler, cluster.executor());
-                    future.complete(resultSet);
+					if (!f.isSuccess()) {
+						logger.debug(String.format("Write on connection %s failed", thisConnection), f.cause());
+						thisConnection.isDead = true;
+						thisConnection.returnToPool();
+						future.completeExceptionally(f.cause());
+					} else {
+						final LinkedBlockingQueue<ResponseMessage> responseQueue = new LinkedBlockingQueue<>();
+						final CompletableFuture<Void> readCompleted = new CompletableFuture<>();
+						readCompleted.thenAcceptAsync(v -> {
+							thisConnection.returnToPool();
+							if (isClosed() && pending.isEmpty())
+								shutdown(closeFuture.get());
+						});
+						final ResponseQueue handler = new ResponseQueue(responseQueue, readCompleted);
+						pending.put(requestMessage.getRequestId(), handler);
+						final ResultSet resultSet = new ResultSet(handler, cluster.executor());
+						future.complete(resultSet);
+					}
                 });
         channel.writeAndFlush(requestMessage, promise);
         return promise;
@@ -169,10 +176,7 @@ class Connection {
 
     @Override
     public String toString() {
-        return "Connection{" +
-                "inFlight=" + inFlight + "," +
-                "pending=" + pending.size() +
-                '}';
+		return String.format("Connection{isDead=%s, inFlight=%s, pending=%s}", isDead, inFlight, pending.size());
     }
 
     class ClientPipelineInitializer extends ChannelInitializer<SocketChannel> {

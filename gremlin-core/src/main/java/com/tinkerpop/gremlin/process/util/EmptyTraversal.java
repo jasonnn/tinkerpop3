@@ -1,10 +1,11 @@
 package com.tinkerpop.gremlin.process.util;
 
-import com.tinkerpop.gremlin.process.Holder;
-import com.tinkerpop.gremlin.process.Optimizers;
+import com.tinkerpop.gremlin.process.Traverser;
+import com.tinkerpop.gremlin.process.TraversalStrategies;
 import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.TraversalEngine;
+import com.tinkerpop.gremlin.process.graph.strategy.DefaultTraversalStrategies;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -17,8 +18,8 @@ import java.util.NoSuchElementException;
 public class EmptyTraversal<S, E> implements Traversal<S, E> {
 
     private static final EmptyTraversal INSTANCE = new EmptyTraversal();
-    private static final Variables VARIABLES = new DefaultVariables();         // TODO: make "empty memory?"
-    private static final Optimizers OPTIMIZERS = new DefaultOptimizers();   // TODO: make "empty optimizers?"
+    private static final Memory MEMORY = new DefaultMemory();         // TODO: make "empty memory?"
+    private static final TraversalStrategies TRAVERSAL_STRATEGIES = new DefaultTraversalStrategies();   // TODO: make "empty traversalStrategies?"
 
     public static EmptyTraversal instance() {
         return INSTANCE;
@@ -32,15 +33,15 @@ public class EmptyTraversal<S, E> implements Traversal<S, E> {
         throw new NoSuchElementException();
     }
 
-    public Variables memory() {
-        return VARIABLES;
+    public Memory memory() {
+        return MEMORY;
     }
 
-    public Optimizers optimizers() {
-        return OPTIMIZERS;
+    public TraversalStrategies strategies() {
+        return TRAVERSAL_STRATEGIES;
     }
 
-    public void addStarts(final Iterator<Holder<S>> starts) {
+    public void addStarts(final Iterator<Traverser<S>> starts) {
 
     }
 

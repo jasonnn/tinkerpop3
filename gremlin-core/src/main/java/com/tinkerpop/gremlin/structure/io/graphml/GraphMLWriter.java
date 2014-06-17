@@ -1,5 +1,6 @@
 package com.tinkerpop.gremlin.structure.io.graphml;
 
+import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.structure.Direction;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
@@ -67,7 +68,17 @@ public class GraphMLWriter implements GraphWriter {
         throw new UnsupportedOperationException("GraphML does not allow for a partial structure");
     }
 
-    /**
+	@Override
+	public void writeVertices(OutputStream outputStream, Traversal<?, Vertex> traversal, Direction direction) throws IOException {
+		throw new UnsupportedOperationException("GraphML does not allow for a partial structure");
+	}
+
+	@Override
+	public void writeVertices(OutputStream outputStream, Traversal<?, Vertex> traversal) throws IOException {
+		throw new UnsupportedOperationException("GraphML does not allow for a partial structure");
+	}
+
+	/**
      * Write the data in a Graph to a GraphML OutputStream.
      *
      * @param outputStream the GraphML OutputStream to write the Graph data to
@@ -156,17 +167,17 @@ public class GraphMLWriter implements GraphWriter {
 
             for (Edge edge : edges) {
                 writer.writeStartElement(GraphMLTokens.EDGE);
-                writer.writeAttribute(GraphMLTokens.ID, edge.getId().toString());
-                writer.writeAttribute(GraphMLTokens.SOURCE, edge.getVertex(Direction.OUT).getId().toString());
-                writer.writeAttribute(GraphMLTokens.TARGET, edge.getVertex(Direction.IN).getId().toString());
+                writer.writeAttribute(GraphMLTokens.ID, edge.id().toString());
+                writer.writeAttribute(GraphMLTokens.SOURCE, edge.outV().next().id().toString());
+                writer.writeAttribute(GraphMLTokens.TARGET, edge.inV().next().id().toString());
 
                 writer.writeStartElement(GraphMLTokens.DATA);
                 writer.writeAttribute(GraphMLTokens.KEY, this.edgeLabelKey);
-                writer.writeCharacters(edge.getLabel());
+                writer.writeCharacters(edge.label());
                 writer.writeEndElement();
 
                 final List<String> keys = new ArrayList<>();
-                keys.addAll(edge.getPropertyKeys());
+                keys.addAll(edge.keys());
                 Collections.sort(keys);
 
                 for (String key : keys) {
@@ -174,7 +185,7 @@ public class GraphMLWriter implements GraphWriter {
                     writer.writeAttribute(GraphMLTokens.KEY, key);
                     // technically there can't be a null here as Blueprints forbids that occurrence even if Graph
                     // implementations support it, but out to empty string just in case.
-                    writer.writeCharacters(edge.getProperty(key).orElse("").toString());
+                    writer.writeCharacters(edge.property(key).orElse("").toString());
                     writer.writeEndElement();
                 }
                 writer.writeEndElement();
@@ -182,21 +193,21 @@ public class GraphMLWriter implements GraphWriter {
         } else {
             for (Edge edge : graph.E().toList()) {
                 writer.writeStartElement(GraphMLTokens.EDGE);
-                writer.writeAttribute(GraphMLTokens.ID, edge.getId().toString());
-                writer.writeAttribute(GraphMLTokens.SOURCE, edge.getVertex(Direction.OUT).getId().toString());
-                writer.writeAttribute(GraphMLTokens.TARGET, edge.getVertex(Direction.IN).getId().toString());
+                writer.writeAttribute(GraphMLTokens.ID, edge.id().toString());
+                writer.writeAttribute(GraphMLTokens.SOURCE, edge.outV().next().id().toString());
+                writer.writeAttribute(GraphMLTokens.TARGET, edge.inV().next().id().toString());
 
                 writer.writeStartElement(GraphMLTokens.DATA);
                 writer.writeAttribute(GraphMLTokens.KEY, this.edgeLabelKey);
-                writer.writeCharacters(edge.getLabel());
+                writer.writeCharacters(edge.label());
                 writer.writeEndElement();
 
-                for (String key : edge.getPropertyKeys()) {
+                for (String key : edge.keys()) {
                     writer.writeStartElement(GraphMLTokens.DATA);
                     writer.writeAttribute(GraphMLTokens.KEY, key);
                     // technically there can't be a null here as Blueprints forbids that occurrence even if Graph
                     // implementations support it, but out to empty string just in case.
-                    writer.writeCharacters(edge.getProperty(key).orElse("").toString());
+                    writer.writeCharacters(edge.property(key).orElse("").toString());
                     writer.writeEndElement();
                 }
                 writer.writeEndElement();
@@ -208,12 +219,12 @@ public class GraphMLWriter implements GraphWriter {
         final Iterable<Vertex> vertices = getVerticesAndNormalizeIfRequired(graph);
         for (Vertex vertex : vertices) {
             writer.writeStartElement(GraphMLTokens.NODE);
-            writer.writeAttribute(GraphMLTokens.ID, vertex.getId().toString());
+            writer.writeAttribute(GraphMLTokens.ID, vertex.id().toString());
             final Collection<String> keys = getElementKeysAndNormalizeIfRequired(vertex);
 
             writer.writeStartElement(GraphMLTokens.DATA);
             writer.writeAttribute(GraphMLTokens.KEY, this.vertexLabelKey);
-            writer.writeCharacters(vertex.getLabel());
+            writer.writeCharacters(vertex.label());
             writer.writeEndElement();
 
             for (String key : keys) {
@@ -221,7 +232,7 @@ public class GraphMLWriter implements GraphWriter {
                 writer.writeAttribute(GraphMLTokens.KEY, key);
                 // technically there can't be a null here as Blueprints forbids that occurrence even if Graph
                 // implementations support it, but out to empty string just in case.
-                writer.writeCharacters(vertex.getProperty(key).orElse("").toString());
+                writer.writeCharacters(vertex.property(key).orElse("").toString());
                 writer.writeEndElement();
             }
             writer.writeEndElement();
@@ -232,10 +243,10 @@ public class GraphMLWriter implements GraphWriter {
         final Collection<String> keys;
         if (normalize) {
             keys = new ArrayList<>();
-            keys.addAll(element.getPropertyKeys());
+            keys.addAll(element.keys());
             Collections.sort((List<String>) keys);
         } else
-            keys = element.getPropertyKeys();
+            keys = element.keys();
 
         return keys;
     }
@@ -292,9 +303,9 @@ public class GraphMLWriter implements GraphWriter {
     private Map<String, String> determineVertexTypes(final Graph graph) {
         final Map<String, String> vertexKeyTypes = new HashMap<>();
         for (Vertex vertex : graph.V().toList()) {
-            for (String key : vertex.getPropertyKeys()) {
+            for (String key : vertex.keys()) {
                 if (!vertexKeyTypes.containsKey(key)) {
-                    vertexKeyTypes.put(key, GraphMLWriter.getStringType(vertex.getProperty(key).get()));
+                    vertexKeyTypes.put(key, GraphMLWriter.getStringType(vertex.property(key).value()));
                 }
             }
         }
@@ -305,9 +316,9 @@ public class GraphMLWriter implements GraphWriter {
     private Map<String, String> determineEdgeTypes(final Graph graph) {
         final Map<String, String> edgeKeyTypes = new HashMap<>();
         for (Edge edge : graph.E().toList()) {
-            for (String key : edge.getPropertyKeys()) {
+            for (String key : edge.keys()) {
                 if (!edgeKeyTypes.containsKey(key))
-                    edgeKeyTypes.put(key, GraphMLWriter.getStringType(edge.getProperty(key).get()));
+                    edgeKeyTypes.put(key, GraphMLWriter.getStringType(edge.property(key).value()));
             }
         }
 
@@ -383,7 +394,7 @@ public class GraphMLWriter implements GraphWriter {
 
         /**
          * Set the name of the edge label in the GraphML. This value is defaulted to {@link GraphMLTokens#LABEL_E}.
-         * The value of Edge.getLabel() is written as a data element on the edge and the appropriate key element is
+         * The value of Edge.label() is written as a data element on the edge and the appropriate key element is
          * added to define it in the GraphML.  It is important that when reading this GraphML back in with the
          * reader that this label key is set appropriately to properly read the edge labels.
          *

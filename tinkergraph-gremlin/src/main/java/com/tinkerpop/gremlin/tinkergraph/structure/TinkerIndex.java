@@ -119,9 +119,9 @@ class TinkerIndex<T extends Element> implements Serializable {
         (Vertex.class.isAssignableFrom(this.indexClass) ?
                 this.graph.vertices.values().<T>parallelStream() :
                 this.graph.edges.values().<T>parallelStream())
-                .map(e -> new Object[]{((T) e).getProperty(key), e})
+                .map(e -> new Object[]{((T) e).property(key), e})
                 .filter(a -> ((Property) a[0]).isPresent())
-                .forEach(a -> this.put(key, ((Property) a[0]).get(), (T) a[1]));
+                .forEach(a -> this.put(key, ((Property) a[0]).value(), (T) a[1]));
     }
 
     public void dropKeyIndex(final String key) {

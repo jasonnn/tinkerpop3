@@ -6,23 +6,24 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.tinkerpop.gremlin.structure.AnnotatedList;
 import com.tinkerpop.gremlin.structure.Direction;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
+import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.io.GraphReader;
-import com.tinkerpop.gremlin.structure.io.util.IoAnnotatedList;
-import com.tinkerpop.gremlin.structure.io.util.IoAnnotatedValue;
 import com.tinkerpop.gremlin.structure.util.batch.BatchGraph;
+import com.tinkerpop.gremlin.util.function.FunctionUtils;
 import com.tinkerpop.gremlin.util.function.QuintFunction;
 import com.tinkerpop.gremlin.util.function.TriFunction;
-import org.javatuples.Pair;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
+import java.io.InputStreamReader;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,13 +90,13 @@ public class GraphSONReader implements GraphReader {
             } else if (fieldName.equals(GraphSONTokens.EDGES)) {
                 while (parser.nextToken() != JsonToken.END_ARRAY) {
                     final Map<String,Object> edgeData = parser.readValueAs(mapTypeReference);
-                    readEdgeData(edgeData, (id, out, in, label, props) ->  {
-                        final Vertex vOut = graph.v(out);
-                        final Vertex vIn = graph.v(in);
-                        // batchgraph checks for edge id support and uses it if possible.
-                        return vOut.addEdge(edgeData.get(GraphSONTokens.LABEL).toString(), vIn,
-                                Stream.concat(Stream.of(Element.ID, id), Stream.of(props)).toArray());
-                    });
+                    readEdgeData(edgeData, (id, out, in, label, props) -> {
+						final Vertex vOut = graph.v(out);
+						final Vertex vIn = graph.v(in);
+						// batchgraph checks for edge id support and uses it if possible.
+						return vOut.addEdge(edgeData.get(GraphSONTokens.LABEL).toString(), vIn,
+								Stream.concat(Stream.of(Element.ID, id), Stream.of(props)).toArray());
+					});
                 }
             } else
                 throw new IllegalStateException(String.format("Unexpected token in GraphSON - %s", fieldName));
@@ -119,16 +120,24 @@ public class GraphSONReader implements GraphReader {
         final Map<String,Object> vertexData = mapper.readValue(inputStream, mapTypeReference);
         final Vertex v = readVertexData(vertexData, vertexMaker);
 
-        if (vertexData.containsKey(GraphSONTokens.OUT) && (direction == Direction.BOTH || direction == Direction.OUT))
-            readVertexEdges(edgeMaker, vertexData, GraphSONTokens.OUT);
+        if (vertexData.containsKey(GraphSONTokens.OUT_E) && (direction == Direction.BOTH || direction == Direction.OUT))
+            readVertexEdges(edgeMaker, vertexData, GraphSONTokens.OUT_E);
 
-        if (vertexData.containsKey(GraphSONTokens.IN) && (direction == Direction.BOTH || direction == Direction.IN))
-            readVertexEdges(edgeMaker, vertexData, GraphSONTokens.IN);
+        if (vertexData.containsKey(GraphSONTokens.IN_E) && (direction == Direction.BOTH || direction == Direction.IN))
+            readVertexEdges(edgeMaker, vertexData, GraphSONTokens.IN_E);
 
         return v;
     }
 
-    @Override
+	@Override
+	public Iterator<Vertex> readVertices(final InputStream inputStream, final Direction direction,
+							   			 final TriFunction<Object, String, Object[], Vertex> vertexMaker,
+							   			 final QuintFunction<Object, Object, Object, String, Object[], Edge> edgeMaker) throws IOException {
+		final BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
+		return br.lines().<Vertex>map(FunctionUtils.wrapFunction(line -> readVertex(new ByteArrayInputStream(line.getBytes()), direction, vertexMaker, edgeMaker))).iterator();
+	}
+
+	@Override
     public Edge readEdge(final InputStream inputStream, final QuintFunction<Object, Object, Object, String, Object[], Edge> edgeMaker) throws IOException {
         final Map<String,Object> edgeData = mapper.readValue(inputStream, mapTypeReference);
         return readEdgeData(edgeData, edgeMaker);
@@ -143,7 +152,11 @@ public class GraphSONReader implements GraphReader {
 
     private static Edge readEdgeData(final Map<String,Object> edgeData, final QuintFunction<Object, Object, Object, String, Object[], Edge> edgeMaker) throws IOException {
         final Map<String, Object> properties = (Map<String, Object>) edgeData.get(GraphSONTokens.PROPERTIES);
-        final Object[] propsAsArray = properties.entrySet().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())).toArray();
+		final Map<String, Object> hiddens = (Map<String, Object>) edgeData.get(GraphSONTokens.HIDDENS);
+		final Object[] propsAsArray = Stream.concat(
+				properties.entrySet().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())),
+				hiddens.entrySet().stream().flatMap(e -> Stream.of(Property.hidden(e.getKey()), e.getValue()))).toArray();
+
         return edgeMaker.apply(
                 edgeData.get(GraphSONTokens.ID),
                 edgeData.get(GraphSONTokens.OUT),
@@ -154,30 +167,12 @@ public class GraphSONReader implements GraphReader {
 
     private static Vertex readVertexData(final Map<String,Object> vertexData, final TriFunction<Object, String, Object[], Vertex> vertexMaker) throws IOException {
         final Map<String, Object> properties = (Map<String, Object>) vertexData.get(GraphSONTokens.PROPERTIES);
-        final List<Pair<String, IoAnnotatedList>> annotatedLists = new ArrayList<>();
-        final Object[] propsAsArray = properties.entrySet().stream().flatMap(e -> {
-            final Object o = e.getValue();
-            if (o instanceof IoAnnotatedList) {
-                annotatedLists.add(Pair.with(e.getKey(), (IoAnnotatedList) o));
-                return Stream.of(e.getKey(), AnnotatedList.make());
-            } else {
-                return Stream.of(e.getKey(), e.getValue());
-            }
-        }).toArray();
+		final Map<String, Object> hiddens = (Map<String, Object>) vertexData.get(GraphSONTokens.HIDDENS);
+		final Object[] propsAsArray = Stream.concat(
+				properties.entrySet().stream().flatMap(e -> Stream.of(e.getKey(), e.getValue())),
+				hiddens.entrySet().stream().flatMap(e -> Stream.of(Property.hidden(e.getKey()), e.getValue()))).toArray();
 
-        final Vertex newVertex = vertexMaker.apply(vertexData.get(GraphSONTokens.ID), vertexData.get(GraphSONTokens.LABEL).toString(), propsAsArray);
-        setAnnotatedListValues(annotatedLists, newVertex);
-        return newVertex;
-    }
-
-    private static void setAnnotatedListValues(final List<Pair<String, IoAnnotatedList>> annotatedLists, final Vertex v) {
-        annotatedLists.forEach(kal -> {
-            final AnnotatedList al = v.getValue(kal.getValue0());
-            final List<IoAnnotatedValue> valuesForAnnotation = kal.getValue1().annotatedValueList;
-            for (IoAnnotatedValue kav : valuesForAnnotation) {
-                al.addValue(kav.value, kav.toAnnotationsArray());
-            }
-        });
+        return vertexMaker.apply(vertexData.get(GraphSONTokens.ID), vertexData.get(GraphSONTokens.LABEL).toString(), propsAsArray);
     }
 
     public static Builder create() {

@@ -1,16 +1,20 @@
 package com.tinkerpop.gremlin.structure.io.kryo;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+
 /**
  * Represents the end of a vertex in a serialization stream.
  *
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-class VertexTerminator {
+public class VertexTerminator {
     public static final VertexTerminator INSTANCE = new VertexTerminator();
-    private final boolean terminal;
+
+	public final byte[] terminal;
 
     private VertexTerminator() {
-        this.terminal = true;
+		terminal = ByteBuffer.allocate(8).putLong(4185403236219066774L).array();
     }
 
     @Override
@@ -25,8 +29,8 @@ class VertexTerminator {
         return true;
     }
 
-    @Override
-    public int hashCode() {
-        return (terminal ? 1 : 0);
-    }
+	@Override
+	public int hashCode() {
+		return Arrays.hashCode(terminal);
+	}
 }

@@ -1,11 +1,14 @@
 package com.tinkerpop.gremlin.structure.strategy;
 
+import com.tinkerpop.gremlin.process.graph.GraphTraversal;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Property;
+import org.javatuples.Pair;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
@@ -16,6 +19,8 @@ public abstract class StrategyWrappedElement implements Element, StrategyWrapped
     private final Strategy.Context<StrategyWrappedElement> elementStrategyContext;
 
     protected StrategyWrappedElement(final Element baseElement, final StrategyWrappedGraph strategyWrappedGraph) {
+		if (baseElement instanceof StrategyWrapped) throw new IllegalArgumentException(
+				String.format("The element %s is already StrategyWrapped and must be a base Element", baseElement));
         this.strategyWrappedGraph = strategyWrappedGraph;
         this.baseElement = baseElement;
         this.elementStrategyContext = new Strategy.Context<>(strategyWrappedGraph.getBaseGraph(), this);
@@ -26,54 +31,91 @@ public abstract class StrategyWrappedElement implements Element, StrategyWrapped
     }
 
     @Override
-    public <V> V getValue(final String key) throws NoSuchElementException {
-        return this.baseElement.getValue(key);
+    public <V> V value(final String key) throws NoSuchElementException {
+		return this.strategyWrappedGraph.strategy().compose(
+				s -> s.<V>getElementValue(elementStrategyContext),
+				this.baseElement::value).apply(key);
     }
 
     @Override
-    public void setProperties(final Object... keyValues) {
-        this.baseElement.setProperties(keyValues);
+    public void properties(final Object... keyValues) {
+		this.strategyWrappedGraph.strategy().compose(
+			s -> s.getElementPropertiesSetter(elementStrategyContext),
+			this.baseElement::properties).accept(keyValues);
     }
 
     @Override
-    public <V> Property<V> getProperty(final String key) {
-        return this.strategyWrappedGraph.strategy().compose(
+    public <V> Property<V> property(final String key) {
+        return new StrategyWrappedProperty<>(this.strategyWrappedGraph.strategy().compose(
                 s -> s.<V>getElementGetProperty(elementStrategyContext),
-                this.baseElement::getProperty).apply(key);
+                this.baseElement::property).apply(key), this.strategyWrappedGraph);
     }
 
     @Override
-    public Map<String, Property> getProperties() {
-        return this.baseElement.getProperties();
+    public Map<String, Property> properties() {
+		return this.strategyWrappedGraph.strategy().compose(
+				s -> s.getElementPropertiesGetter(elementStrategyContext),
+				() -> this.baseElement.properties()).get().entrySet().stream()
+				.map(e -> Pair.with(e.getKey(), new StrategyWrappedProperty(e.getValue(), strategyWrappedGraph)))
+                .collect(Collectors.toMap(p -> p.getValue0(), p -> p.getValue1()));
     }
 
     @Override
-    public Map<String, Property> getHiddens() {
-        return this.baseElement.getHiddens();
+    public Map<String, Property> hiddens() {
+		return this.strategyWrappedGraph.strategy().compose(
+				s -> s.getElementHiddens(elementStrategyContext),
+				this.baseElement::hiddens).get().entrySet().stream()
+				.map(e -> Pair.with(e.getKey(), new StrategyWrappedProperty(e.getValue(), strategyWrappedGraph)))
+				.collect(Collectors.toMap(p -> p.getValue0(), p -> p.getValue1()));
     }
 
     @Override
-    public Set<String> getPropertyKeys() {
-        return this.baseElement.getPropertyKeys();
-    }
-
-    @Override
-    public String getLabel() {
-        return this.baseElement.getLabel();
-    }
-
-    @Override
-    public Object getId() {
+    public Set<String> keys() {
         return this.strategyWrappedGraph.strategy().compose(
-                s -> s.getElementGetId(elementStrategyContext),
-                this.baseElement::getId).get().toString();
+                s -> s.getElementKeys(elementStrategyContext),
+                this.baseElement::keys).get();
     }
 
     @Override
-    public <V> Property<V> setProperty(final String key, final V value) {
+    public Set<String> hiddenKeys() {
         return this.strategyWrappedGraph.strategy().compose(
-                s -> s.<V>getElementSetProperty(elementStrategyContext),
-                this.baseElement::setProperty).apply(key, value);
+                s -> s.getElementHiddenKeys(elementStrategyContext),
+                this.baseElement::hiddenKeys).get();
+    }
+
+    @Override
+    public Map<String, Object> values() {
+        return this.strategyWrappedGraph.strategy().compose(
+                s -> s.getElementValues(elementStrategyContext),
+                this.baseElement::values).get();
+    }
+
+    @Override
+    public Map<String, Object> hiddenValues() {
+        return this.strategyWrappedGraph.strategy().compose(
+                s -> s.getElementHiddenValues(elementStrategyContext),
+                this.baseElement::hiddenValues).get();
+    }
+
+    @Override
+    public String label() {
+        return this.strategyWrappedGraph.strategy().compose(
+                s -> s.getElementLabel(elementStrategyContext),
+                this.baseElement::label).get();
+    }
+
+    @Override
+    public Object id() {
+		return this.strategyWrappedGraph.strategy().compose(
+                s -> s.getElementId(elementStrategyContext),
+                this.baseElement::id).get();
+    }
+
+    @Override
+    public <V> Property<V> property(final String key, final V value) {
+        return this.strategyWrappedGraph.strategy().compose(
+                s -> s.<V>getElementProperty(elementStrategyContext),
+                this.baseElement::property).apply(key, value);
     }
 
     @Override
@@ -84,5 +126,17 @@ public abstract class StrategyWrappedElement implements Element, StrategyWrapped
                     this.baseElement.remove();
                     return null;
                 }).get();
+    }
+
+	@Override
+	public String toString() {
+		final GraphStrategy strategy = this.strategyWrappedGraph.strategy().getGraphStrategy().orElse(GraphStrategy.DoNothingGraphStrategy.INSTANCE);
+		return String.format("[%s[%s]]", strategy, baseElement.toString());
+	}
+
+    protected <S,E> GraphTraversal<S,E> applyStrategy(final GraphTraversal<S,E> traversal) {
+        traversal.strategies().register(new StrategyWrappedTraversalStrategy(this.strategyWrappedGraph));
+        this.strategyWrappedGraph.strategy().getGraphStrategy().ifPresent(s -> s.applyStrategyToTraversal(traversal));
+        return traversal;
     }
 }

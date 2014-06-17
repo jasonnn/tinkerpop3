@@ -1,5 +1,8 @@
 package com.tinkerpop.gremlin.process;
 
+import com.tinkerpop.gremlin.process.graph.step.filter.PathIdentityStep;
+import com.tinkerpop.gremlin.process.graph.marker.Reversible;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,11 +20,11 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
 
     public static final String OF = "of";
 
-    public Variables memory();
+    public Memory memory();
 
-    public Optimizers optimizers();
+    public TraversalStrategies strategies();
 
-    public void addStarts(final Iterator<Holder<S>> starts);
+    public void addStarts(final Iterator<Traverser<S>> starts);
 
     public <S, E, T extends Traversal<S, E>> T addStep(final Step<?, E> step);
 
@@ -35,35 +38,35 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
         return traversal;
     }*/
 
-    public interface Variables extends Serializable {
+    public interface Memory extends Serializable {
 
-        public static class Variable {
+        public <T> void set(final String key, final T value);
 
-            private static final String HIDDEN_PREFIX = "%&%";
+        public <T> T get(final String key);
 
-            public static String hidden(final String key) {
-                return HIDDEN_PREFIX.concat(key);
-            }
-        }
+        public Set<String> keys();
 
-        public <T> void set(final String variable, final T value);
-
-        public <T> T get(final String variable);
-
-        public Set<String> getVariables();
-
-        public default <T> T getOrCreate(final String variable, final Supplier<T> orCreate) {
-            if (this.getVariables().contains(variable))
-                return this.get(variable);
+        public default <T> T getOrCreate(final String key, final Supplier<T> orCreate) {
+            if (this.keys().contains(key))
+                return this.get(key);
             else {
                 T t = orCreate.get();
-                this.set(variable, t);
+                this.set(key, t);
                 return t;
             }
         }
     }
 
     /////////
+
+    public default Traversal<S, E> trackPaths() {
+        return (Traversal) this.addStep(new PathIdentityStep<>(this));
+    }
+
+    public default Traversal<S, E> reverse() {
+        this.getSteps().stream().filter(step -> step instanceof Reversible).forEach(step -> ((Reversible) step).reverse());
+        return this;
+    }
 
     public default List<E> next(final int amount) {
         final List<E> result = new ArrayList<>();
@@ -80,7 +83,7 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
 
     public default Collection<E> fill(final Collection<E> collection) {
         try {
-            while (true) {
+            while (this.hasNext()) {
                 collection.add(this.next());
             }
         } catch (final NoSuchElementException e) {
@@ -90,7 +93,7 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
 
     public default Traversal iterate() {
         try {
-            while (true) {
+            while (this.hasNext()) {
                 this.next();
             }
         } catch (final NoSuchElementException e) {
@@ -101,7 +104,7 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
     public default long count() {
         long counter = 0;
         try {
-            while (true) {
+            while (this.hasNext()) {
                 this.next();
                 counter++;
             }
@@ -116,12 +119,11 @@ public interface Traversal<S, E> extends Iterator<E>, Serializable {
 
     public default void forEach(final Consumer<E> consumer) {
         try {
-            while (true) {
+            while (this.hasNext()) {
                 consumer.accept(this.next());
             }
         } catch (final NoSuchElementException e) {
 
         }
     }
-
 }

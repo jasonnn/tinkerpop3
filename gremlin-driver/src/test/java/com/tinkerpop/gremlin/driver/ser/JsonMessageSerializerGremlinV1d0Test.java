@@ -4,16 +4,12 @@ import com.tinkerpop.gremlin.driver.MessageSerializer;
 import com.tinkerpop.gremlin.driver.message.ResponseMessage;
 import com.tinkerpop.gremlin.driver.message.ResultCode;
 import com.tinkerpop.gremlin.driver.message.ResultType;
-import com.tinkerpop.gremlin.structure.AnnotatedList;
-import com.tinkerpop.gremlin.structure.AnnotatedValue;
 import com.tinkerpop.gremlin.structure.Compare;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.io.graphson.GraphSONTokens;
-import com.tinkerpop.gremlin.structure.io.util.IoAnnotatedList;
-import com.tinkerpop.gremlin.structure.io.util.IoAnnotatedValue;
 import com.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory;
 import com.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import io.netty.buffer.ByteBuf;
@@ -104,7 +100,7 @@ public class JsonMessageSerializerGremlinV1d0Test {
         final Vertex v1 = g.addVertex();
         final Vertex v2 = g.addVertex();
         final Edge e = v1.addEdge("test", v2);
-        e.setProperty("abc", 123);
+        e.property("abc", 123);
 
         final Iterable<Edge> iterable = g.E().toList();
 
@@ -115,12 +111,12 @@ public class JsonMessageSerializerGremlinV1d0Test {
         assertEquals(1, edgeList.size());
 
         final Map<String,Object> deserializedEdge = edgeList.get(0);
-        assertEquals(e.getId(), deserializedEdge.get(GraphSONTokens.ID));
-        assertEquals(v1.getId(), deserializedEdge.get(GraphSONTokens.OUT));
-        assertEquals(v2.getId(), deserializedEdge.get(GraphSONTokens.IN));
-        assertEquals(v1.getLabel(), deserializedEdge.get(GraphSONTokens.OUT_LABEL));
-        assertEquals(v2.getLabel(), deserializedEdge.get(GraphSONTokens.IN_LABEL));
-        assertEquals(e.getLabel(), deserializedEdge.get(GraphSONTokens.LABEL));
+        assertEquals(e.id(), deserializedEdge.get(GraphSONTokens.ID));
+        assertEquals(v1.id(), deserializedEdge.get(GraphSONTokens.OUT));
+        assertEquals(v2.id(), deserializedEdge.get(GraphSONTokens.IN));
+        assertEquals(v1.label(), deserializedEdge.get(GraphSONTokens.OUT_LABEL));
+        assertEquals(v2.label(), deserializedEdge.get(GraphSONTokens.IN_LABEL));
+        assertEquals(e.label(), deserializedEdge.get(GraphSONTokens.LABEL));
         assertEquals(GraphSONTokens.EDGE, deserializedEdge.get(GraphSONTokens.TYPE));
 
         final Map<String,Object> properties = (Map<String,Object>) deserializedEdge.get(GraphSONTokens.PROPERTIES);
@@ -142,7 +138,7 @@ public class JsonMessageSerializerGremlinV1d0Test {
         friends.add(5);
         friends.add(map);
 
-        v.setProperty("friends", friends);
+        v.property("friends", friends);
 
         final List list = g.V().toList();
 
@@ -154,7 +150,7 @@ public class JsonMessageSerializerGremlinV1d0Test {
 
         final Map<String,Object> deserializedVertex = vertexList.get(0);
         assertEquals(0l, deserializedVertex.get(GraphSONTokens.ID));
-        assertEquals(Element.DEFAULT_LABEL, deserializedVertex.get(GraphSONTokens.LABEL));
+        assertEquals(Vertex.DEFAULT_LABEL, deserializedVertex.get(GraphSONTokens.LABEL));
 
         final Map<String,Object> properties = (Map<String,Object>) deserializedVertex.get(GraphSONTokens.PROPERTIES);
         assertEquals(1, properties.size());
@@ -185,92 +181,6 @@ public class JsonMessageSerializerGremlinV1d0Test {
         // with no embedded types the key (which is a vertex) simply serializes out to an id
         // {"result":{"1":1000},"code":200,"requestId":"2d62161b-9544-4f39-af44-62ec49f9a595","type":0}
         assertEquals(new Integer(1000), deserializedMap.get("1"));
-    }
-
-
-    @Test
-    public void serializeVertexWithAnnotatedList() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final Vertex v = g.v(1);
-
-        final ResponseMessage response = convert(v);
-        assertCommon(response);
-
-        final Map<String,Object> deserializedVertex = (Map<String,Object>) response.getResult();
-        assertEquals(1, deserializedVertex.get(GraphSONTokens.ID));
-        assertEquals("person", deserializedVertex.get(GraphSONTokens.LABEL));
-
-        final Map<String,Object> properties = (Map<String,Object>) deserializedVertex.get(GraphSONTokens.PROPERTIES);
-        assertEquals(2, properties.size());
-        assertEquals("marko", properties.get("name"));
-
-        final IoAnnotatedList<String> list = (IoAnnotatedList<String>) properties.get("locations");
-        assertEquals(4, list.annotatedValueList.size());
-
-        list.annotatedValueList.forEach(av -> {
-            if (av.value.equals("san diego")) {
-                assertEquals(1997, av.annotations.get("startTime"));
-                assertEquals(2001, av.annotations.get("endTime"));
-            } else if (av.value.equals("santa cruz")) {
-                assertEquals(2001, av.annotations.get("startTime"));
-                assertEquals(2004, av.annotations.get("endTime"));
-            } else if (av.value.equals("brussels")) {
-                assertEquals(2004, av.annotations.get("startTime"));
-                assertEquals(2005, av.annotations.get("endTime"));
-            } else if (av.value.equals("santa fe")) {
-                assertEquals(2005, av.annotations.get("startTime"));
-                assertEquals(2014, av.annotations.get("endTime"));
-            }
-
-            assertEquals(2, av.annotations.size());
-        });
-    }
-
-    @Test
-    public void serializeAnnotatedList() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final AnnotatedList<String> al = g.v(1).getValue("locations");
-
-        final ResponseMessage response = convert(al);
-        assertCommon(response);
-
-        final IoAnnotatedList<String> list = (IoAnnotatedList<String>) response.getResult();
-        assertEquals(4, list.annotatedValueList.size());
-
-        list.annotatedValueList.forEach(av -> {
-            if (av.value.equals("san diego")) {
-                assertEquals(1997, av.annotations.get("startTime"));
-                assertEquals(2001, av.annotations.get("endTime"));
-            } else if (av.value.equals("santa cruz")) {
-                assertEquals(2001, av.annotations.get("startTime"));
-                assertEquals(2004, av.annotations.get("endTime"));
-            } else if (av.value.equals("brussels")) {
-                assertEquals(2004, av.annotations.get("startTime"));
-                assertEquals(2005, av.annotations.get("endTime"));
-            } else if (av.value.equals("santa fe")) {
-                assertEquals(2005, av.annotations.get("startTime"));
-                assertEquals(2014, av.annotations.get("endTime"));
-            }
-
-            assertEquals(2, av.annotations.size());
-        });
-    }
-
-    @Test
-    public void serializeAnnotatedValue() throws Exception {
-        final Graph g = TinkerFactory.createModern();
-        final AnnotatedList<String> al = g.v(1).getValue("locations");
-        final AnnotatedValue<String> annotatedValue = al.annotatedValues().next();
-
-        final ResponseMessage response = convert(annotatedValue);
-        assertCommon(response);
-
-        final IoAnnotatedValue<String> av = (IoAnnotatedValue<String>) response.getResult();
-
-        assertEquals("san diego", av.value);
-        assertEquals(1997, av.annotations.get("startTime"));
-        assertEquals(2001, av.annotations.get("endTime"));
-        assertEquals(2, av.annotations.size());
     }
 
     private void assertCommon(final ResponseMessage response) {

@@ -1,11 +1,13 @@
 package com.tinkerpop.gremlin.process.util;
 
-import com.tinkerpop.gremlin.process.Holder;
-import com.tinkerpop.gremlin.process.Optimizers;
+import com.tinkerpop.gremlin.process.Traverser;
+import com.tinkerpop.gremlin.process.TraversalStrategies;
 import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.TraversalEngine;
-import com.tinkerpop.gremlin.process.graph.map.StartStep;
+import com.tinkerpop.gremlin.process.graph.step.map.StartStep;
+import com.tinkerpop.gremlin.process.graph.strategy.DefaultTraversalStrategies;
+import com.tinkerpop.gremlin.process.graph.strategy.PathConsumerStrategy;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -17,27 +19,27 @@ import java.util.List;
 public class DefaultTraversal<S, E> implements Traversal<S, E> {
 
     protected final List<Step> steps = new ArrayList<>();
-    protected final Optimizers optimizers = new DefaultOptimizers();
-    protected final Variables variables = new DefaultVariables();
+    protected final TraversalStrategies traversalStrategies = new DefaultTraversalStrategies();
+    protected final Memory memory = new DefaultMemory();
     protected boolean firstNext = true;
 
     public DefaultTraversal() {
-        this.optimizers.register(new HolderOptimizer());
+        this.traversalStrategies.register(new PathConsumerStrategy());
     }
 
     public List<Step> getSteps() {
         return this.steps;
     }
 
-    public Variables memory() {
-        return this.variables;
+    public Memory memory() {
+        return this.memory;
     }
 
-    public Optimizers optimizers() {
-        return optimizers;
+    public TraversalStrategies strategies() {
+        return traversalStrategies;
     }
 
-    public void addStarts(final Iterator<Holder<S>> starts) {
+    public void addStarts(final Iterator<Traverser<S>> starts) {
         ((Step<S, ?>) this.steps.get(0)).addStarts(starts);
     }
 
@@ -58,7 +60,7 @@ public class DefaultTraversal<S, E> implements Traversal<S, E> {
 
     public E next() {
         this.doFinalOptimization();
-        return ((Holder<E>) this.steps.get(this.steps.size() - 1).next()).get();
+        return ((Traverser<E>) this.steps.get(this.steps.size() - 1).next()).get();
     }
 
     public String toString() {
@@ -79,7 +81,7 @@ public class DefaultTraversal<S, E> implements Traversal<S, E> {
 
     private final void doFinalOptimization() {
         if (this.firstNext) {
-            this.optimizers().doFinalOptimizers(this);
+            this.strategies().applyFinalOptimizers(this);
             this.firstNext = false;
         }
     }

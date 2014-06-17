@@ -2,10 +2,13 @@ package com.tinkerpop.gremlin.process.util;
 
 import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.Traversal;
+import com.tinkerpop.gremlin.process.graph.marker.Reversible;
 
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
@@ -20,6 +23,15 @@ public class TraversalHelper {
 
     public static boolean isLabeled(final String as) {
         return !as.startsWith(UNDERSCORE);
+    }
+
+    public static boolean isReversible(final Traversal traversal) {
+        return !traversal.getSteps().stream().filter(step -> !(step instanceof Reversible)).findFirst().isPresent();
+    }
+
+    public static <C extends Step> Optional<C> getLastStep(final Traversal traversal, final Class<C> classToGet) {
+        final List<C> steps = (List) traversal.getSteps().stream().filter(step -> classToGet.isAssignableFrom(step.getClass())).collect(Collectors.<C>toList());
+        return steps.size() == 0 ? Optional.empty() : Optional.of(steps.get(steps.size() - 1));
     }
 
     public static <S, E> Step<S, E> getAs(final String as, final Traversal<?, ?> traversal) {
@@ -74,10 +86,12 @@ public class TraversalHelper {
         }
     }
 
-    public static void removeStep(final Step step, final Traversal traversal) {
+    public static int removeStep(final Step step, final Traversal traversal) {
+        final int stepIndex = traversal.getSteps().indexOf(step);
         traversal.getSteps().remove(step);
         reLabelSteps(traversal);
         reLinkSteps(traversal);
+        return stepIndex;
     }
 
     public static void removeStep(final int index, final Traversal traversal) {
@@ -88,6 +102,11 @@ public class TraversalHelper {
         traversal.getSteps().add(index, step);
         reLabelSteps(traversal);
         reLinkSteps(traversal);
+    }
+
+    public static void replaceStep(final Step removeStep, final Step insertStep, final Traversal traversal) {
+        int index = TraversalHelper.removeStep(removeStep, traversal);
+        TraversalHelper.insertStep(insertStep, index, traversal);
     }
 
     private static void reLabelSteps(final Traversal traversal) {

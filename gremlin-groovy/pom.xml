@@ -4,30 +4,30 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.tinkerpop.tinkerpop3</groupId>
-        <artifactId>tinkerpop3</artifactId>
+        <groupId>com.tinkerpop</groupId>
+        <artifactId>tinkerpop</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>gremlin-groovy</artifactId>
-    <name>Gremlin-Groovy: Gremlin for the Groovy Language</name>
+    <name>Gremlin Groovy: Gremlin for the Groovy Language</name>
     <dependencies>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-algorithm</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-driver</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>tinkergraph-gremlin</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -54,18 +54,18 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-test</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
-            <artifactId>neo4j-gremlin</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
+    <repositories>
+        <repository>
+            <id>hyracks-releases</id>
+            <url>http://obelix.ics.uci.edu/nexus/content/groups/hyracks-public-releases/</url>
+        </repository>
+    </repositories>
     <build>
         <directory>${basedir}/target</directory>
         <finalName>${project.artifactId}-${project.version}</finalName>
@@ -83,7 +83,7 @@
                     <execution>
                         <phase>package</phase>
                         <goals>
-                            <goal>assembly</goal>
+                            <goal>single</goal>
                         </goals>
                     </execution>
                 </executions>

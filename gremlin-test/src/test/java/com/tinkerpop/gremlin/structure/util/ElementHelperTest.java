@@ -105,7 +105,7 @@ public class ElementHelperTest {
 
     @Test
     public void shouldAllowEvenNumberOfKeyValuesAndValidKeys() {
-        ElementHelper.legalPropertyKeyValueArray("key", "test", "value-for-this-one", 1, Property.Key.hidden("1"), "none");
+        ElementHelper.legalPropertyKeyValueArray("key", "test", "value-for-this-one", 1, Property.hidden("1"), "none");
     }
 
     @Test
@@ -157,9 +157,9 @@ public class ElementHelperTest {
     public void shouldAttachKeyValuesButNotLabelsOrId() {
         final Element mockElement = mock(Element.class);
         ElementHelper.attachProperties(mockElement, "test", 123, Element.ID, 321, Element.LABEL, "friends");
-        verify(mockElement, times(1)).setProperty("test", 123);
-        verify(mockElement, times(0)).setProperty(Element.ID, 321);
-        verify(mockElement, times(0)).setProperty(Element.LABEL, "friends");
+        verify(mockElement, times(1)).property("test", 123);
+        verify(mockElement, times(0)).property(Element.ID, 321);
+        verify(mockElement, times(0)).property(Element.LABEL, "friends");
     }
 
     @Test(expected = ClassCastException.class)
@@ -223,8 +223,8 @@ public class ElementHelperTest {
     public void shouldDetermineVerticesAreEqual() {
         final Element mockVertexA = mock(Vertex.class);
         final Element mockVertexB = mock(Vertex.class);
-        when(mockVertexA.getId()).thenReturn("1");
-        when(mockVertexB.getId()).thenReturn("1");
+        when(mockVertexA.id()).thenReturn("1");
+        when(mockVertexB.id()).thenReturn("1");
         assertTrue(ElementHelper.areEqual(mockVertexA, mockVertexB));
     }
 
@@ -232,8 +232,8 @@ public class ElementHelperTest {
     public void shouldDetermineVerticesAreNotEqual() {
         final Element mockVertexA = mock(Vertex.class);
         final Element mockVertexB = mock(Vertex.class);
-        when(mockVertexA.getId()).thenReturn("1");
-        when(mockVertexB.getId()).thenReturn("2");
+        when(mockVertexA.id()).thenReturn("1");
+        when(mockVertexB.id()).thenReturn("2");
         assertFalse(ElementHelper.areEqual(mockVertexA, mockVertexB));
     }
 
@@ -241,8 +241,8 @@ public class ElementHelperTest {
     public void shouldDetermineEdgesAreEqual() {
         final Element mockEdgeA = mock(Edge.class);
         final Element mockEdgeB = mock(Edge.class);
-        when(mockEdgeA.getId()).thenReturn("1");
-        when(mockEdgeB.getId()).thenReturn("1");
+        when(mockEdgeA.id()).thenReturn("1");
+        when(mockEdgeB.id()).thenReturn("1");
         assertTrue(ElementHelper.areEqual(mockEdgeA, mockEdgeB));
     }
 
@@ -250,8 +250,8 @@ public class ElementHelperTest {
     public void shouldDetermineEdgesAreNotEqual() {
         final Element mockEdgeA = mock(Edge.class);
         final Element mockEdgeB = mock(Edge.class);
-        when(mockEdgeA.getId()).thenReturn("1");
-        when(mockEdgeB.getId()).thenReturn("2");
+        when(mockEdgeA.id()).thenReturn("1");
+        when(mockEdgeB.id()).thenReturn("2");
         assertFalse(ElementHelper.areEqual(mockEdgeA, mockEdgeB));
     }
 
@@ -324,10 +324,10 @@ public class ElementHelperTest {
         when(mockPropertyB.isPresent()).thenReturn(true);
         when(mockPropertyA.getElement()).thenReturn(mockElement);
         when(mockPropertyB.getElement()).thenReturn(mockElement);
-        when(mockPropertyA.getKey()).thenReturn("k");
-        when(mockPropertyB.getKey()).thenReturn("k");
-        when(mockPropertyA.get()).thenReturn("v");
-        when(mockPropertyB.get()).thenReturn("v");
+        when(mockPropertyA.key()).thenReturn("k");
+        when(mockPropertyB.key()).thenReturn("k");
+        when(mockPropertyA.value()).thenReturn("v");
+        when(mockPropertyB.value()).thenReturn("v");
 
         assertTrue(ElementHelper.areEqual(mockPropertyA, mockPropertyB));
     }
@@ -342,10 +342,10 @@ public class ElementHelperTest {
         when(mockPropertyB.isPresent()).thenReturn(true);
         when(mockPropertyA.getElement()).thenReturn(mockElement);
         when(mockPropertyB.getElement()).thenReturn(mockElementDifferent);
-        when(mockPropertyA.getKey()).thenReturn("k");
-        when(mockPropertyB.getKey()).thenReturn("k");
-        when(mockPropertyA.get()).thenReturn("v");
-        when(mockPropertyB.get()).thenReturn("v");
+        when(mockPropertyA.key()).thenReturn("k");
+        when(mockPropertyB.key()).thenReturn("k");
+        when(mockPropertyA.value()).thenReturn("v");
+        when(mockPropertyB.value()).thenReturn("v");
 
         assertFalse(ElementHelper.areEqual(mockPropertyA, mockPropertyB));
     }
@@ -359,10 +359,10 @@ public class ElementHelperTest {
         when(mockPropertyB.isPresent()).thenReturn(true);
         when(mockPropertyA.getElement()).thenReturn(mockElement);
         when(mockPropertyB.getElement()).thenReturn(mockElement);
-        when(mockPropertyA.getKey()).thenReturn("k");
-        when(mockPropertyB.getKey()).thenReturn("k1");
-        when(mockPropertyA.get()).thenReturn("v");
-        when(mockPropertyB.get()).thenReturn("v");
+        when(mockPropertyA.key()).thenReturn("k");
+        when(mockPropertyB.key()).thenReturn("k1");
+        when(mockPropertyA.value()).thenReturn("v");
+        when(mockPropertyB.value()).thenReturn("v");
 
         assertFalse(ElementHelper.areEqual(mockPropertyA, mockPropertyB));
     }
@@ -376,10 +376,10 @@ public class ElementHelperTest {
         when(mockPropertyB.isPresent()).thenReturn(true);
         when(mockPropertyA.getElement()).thenReturn(mockElement);
         when(mockPropertyB.getElement()).thenReturn(mockElement);
-        when(mockPropertyA.getKey()).thenReturn("k");
-        when(mockPropertyB.getKey()).thenReturn("k");
-        when(mockPropertyA.get()).thenReturn("v");
-        when(mockPropertyB.get()).thenReturn("v1");
+        when(mockPropertyA.key()).thenReturn("k");
+        when(mockPropertyB.key()).thenReturn("k");
+        when(mockPropertyA.value()).thenReturn("v");
+        when(mockPropertyB.value()).thenReturn("v1");
 
         assertFalse(ElementHelper.areEqual(mockPropertyA, mockPropertyB));
     }

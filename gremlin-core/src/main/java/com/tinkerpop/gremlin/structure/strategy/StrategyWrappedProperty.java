@@ -1,7 +1,9 @@
 package com.tinkerpop.gremlin.structure.strategy;
 
+import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Property;
+import com.tinkerpop.gremlin.structure.Vertex;
 
 import java.util.NoSuchElementException;
 import java.util.function.Consumer;
@@ -16,19 +18,21 @@ public class StrategyWrappedProperty<V> implements Property<V>, StrategyWrapped 
     private final StrategyWrappedGraph strategyWrappedGraph;
 
     public StrategyWrappedProperty(final Property<V> baseProperty, final StrategyWrappedGraph strategyWrappedGraph) {
+		if (baseProperty instanceof StrategyWrapped) throw new IllegalArgumentException(
+				String.format("The property %s is already StrategyWrapped and must be a base Property", baseProperty));
         this.baseProperty = baseProperty;
         this.strategyContext = new Strategy.Context<>(strategyWrappedGraph.getBaseGraph(), this);
         this.strategyWrappedGraph = strategyWrappedGraph;
     }
 
     @Override
-    public String getKey() {
-        return this.baseProperty.getKey();
+    public String key() {
+        return this.baseProperty.key();
     }
 
     @Override
-    public V get() throws NoSuchElementException {
-        return this.baseProperty.get();
+    public V value() throws NoSuchElementException {
+        return this.baseProperty.value();
     }
 
     @Override
@@ -38,7 +42,9 @@ public class StrategyWrappedProperty<V> implements Property<V>, StrategyWrapped 
 
     @Override
     public <E extends Element> E getElement() {
-        return this.baseProperty.getElement();
+		final Element baseElement = this.baseProperty.getElement();
+        return (E) (baseElement instanceof Vertex ? new StrategyWrappedVertex((Vertex) baseElement, strategyWrappedGraph) :
+				new StrategyWrappedEdge((Edge) baseElement, strategyWrappedGraph));
     }
 
     @Override
@@ -62,12 +68,23 @@ public class StrategyWrappedProperty<V> implements Property<V>, StrategyWrapped 
     }
 
     @Override
+    public boolean isHidden() {
+        return this.baseProperty.isHidden();
+    }
+
+    @Override
     public void remove() {
         this.strategyWrappedGraph.strategy().compose(
                 s -> s.getRemovePropertyStrategy(strategyContext),
                 () -> {
                     this.baseProperty.remove();
                     return null;
-                });
+                }).get();
     }
+
+	@Override
+	public String toString() {
+		final GraphStrategy strategy = this.strategyWrappedGraph.strategy().getGraphStrategy().orElse(GraphStrategy.DoNothingGraphStrategy.INSTANCE);
+		return String.format("[%s[%s]]",strategy, baseProperty.toString());
+	}
 }

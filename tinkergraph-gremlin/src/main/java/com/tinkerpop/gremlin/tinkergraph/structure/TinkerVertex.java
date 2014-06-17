@@ -5,11 +5,10 @@ import com.tinkerpop.gremlin.process.TraversalEngine;
 import com.tinkerpop.gremlin.process.computer.GraphComputer;
 import com.tinkerpop.gremlin.process.graph.DefaultGraphTraversal;
 import com.tinkerpop.gremlin.process.graph.GraphTraversal;
-import com.tinkerpop.gremlin.process.graph.filter.HasStep;
-import com.tinkerpop.gremlin.process.graph.map.IdentityStep;
-import com.tinkerpop.gremlin.process.graph.map.StartStep;
+import com.tinkerpop.gremlin.process.graph.step.filter.HasStep;
+import com.tinkerpop.gremlin.process.graph.step.filter.IdentityStep;
+import com.tinkerpop.gremlin.process.graph.step.map.StartStep;
 import com.tinkerpop.gremlin.process.util.TraversalHelper;
-import com.tinkerpop.gremlin.structure.AnnotatedList;
 import com.tinkerpop.gremlin.structure.Compare;
 import com.tinkerpop.gremlin.structure.Direction;
 import com.tinkerpop.gremlin.structure.Edge;
@@ -19,9 +18,10 @@ import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
 import com.tinkerpop.gremlin.structure.util.HasContainer;
 import com.tinkerpop.gremlin.structure.util.StringFactory;
-import com.tinkerpop.gremlin.tinkergraph.process.graph.map.TinkerGraphStep;
-import com.tinkerpop.gremlin.tinkergraph.process.graph.map.TinkerVertexStep;
-import com.tinkerpop.gremlin.tinkergraph.process.graph.util.optimizers.TinkerGraphStepOptimizer;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.step.map.TinkerGraphStep;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.step.map.TinkerVertexStep;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.strategy.ClearTraverserSourceStrategy;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.strategy.TinkerGraphStepTraversalStrategy;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,25 +39,15 @@ public class TinkerVertex extends TinkerElement implements Vertex {
         super(id, label, graph);
     }
 
-    public <V> Property<V> setProperty(final String key, final V value) {
+    public <V> Property<V> property(final String key, final V value) {
         if (this.graph.useGraphView) {
             return this.graph.graphView.setProperty(this, key, value);
         } else {
             ElementHelper.validateProperty(key, value);
-            final Property oldProperty = super.getProperty(key);
-            Property newProperty;
-            if (value == AnnotatedList.make()) {
-                if (!this.properties.containsKey(key) || !(this.properties.get(key) instanceof AnnotatedList)) {
-                    newProperty = new TinkerProperty<>(this, key, new TinkerAnnotatedList<>());
-                    this.properties.put(key, newProperty);
-                } else {
-                    return this.properties.get(key);
-                }
-            } else {
-                newProperty = new TinkerProperty<>(this, key, value);
-                this.properties.put(key, newProperty);
-            }
-            this.graph.vertexIndex.autoUpdate(key, value, oldProperty.isPresent() ? oldProperty.get() : null, this);
+            final Property oldProperty = super.property(key);
+            final Property newProperty = new TinkerProperty<>(this, key, value);
+            this.properties.put(key, newProperty);
+            this.graph.vertexIndex.autoUpdate(key, value, oldProperty.isPresent() ? oldProperty.value() : null, this);
             return newProperty;
         }
     }
@@ -75,7 +65,7 @@ public class TinkerVertex extends TinkerElement implements Vertex {
             throw Element.Exceptions.elementHasAlreadyBeenRemovedOrDoesNotExist(Vertex.class, this.id);
 
         this.bothE().forEach(Edge::remove);
-        this.getProperties().clear();
+        this.properties().clear();
         this.graph.vertexIndex.removeElement(this);
         this.graph.vertices.remove(this.id);
     }
@@ -88,7 +78,8 @@ public class TinkerVertex extends TinkerElement implements Vertex {
         final GraphTraversal<Vertex, Vertex> traversal = new DefaultGraphTraversal<Vertex, Vertex>() {
             public GraphTraversal<Vertex, Vertex> submit(final TraversalEngine engine) {
                 if (engine instanceof GraphComputer) {
-                    this.optimizers().unregister(TinkerGraphStepOptimizer.class);
+                    this.strategies().unregister(TinkerGraphStepTraversalStrategy.class);
+                    // TODO: this.strategies().register(new ClearTraverserSourceStrategy());
                     final String label = this.getSteps().get(0).getAs();
                     TraversalHelper.removeStep(0, this);
                     final Step identityStep = new IdentityStep(this);
@@ -96,7 +87,7 @@ public class TinkerVertex extends TinkerElement implements Vertex {
                         identityStep.setAs(label);
 
                     TraversalHelper.insertStep(identityStep, 0, this);
-                    TraversalHelper.insertStep(new HasStep(this, new HasContainer(Element.ID, Compare.EQUAL, vertex.getId())), 0, this);
+                    TraversalHelper.insertStep(new HasStep(this, new HasContainer(Element.ID, Compare.EQUAL, vertex.id())), 0, this);
                     TraversalHelper.insertStep(new TinkerGraphStep<>(this, Vertex.class, vertex.graph), 0, this);
                 }
                 return super.submit(engine);

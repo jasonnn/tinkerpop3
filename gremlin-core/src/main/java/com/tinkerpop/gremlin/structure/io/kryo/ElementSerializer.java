@@ -13,7 +13,7 @@ import com.tinkerpop.gremlin.structure.util.cached.CachedVertex;
 import org.javatuples.Pair;
 
 /**
- * Holder class for {@link com.tinkerpop.gremlin.structure.Element} serializers.
+ * Traverser class for {@link com.tinkerpop.gremlin.structure.Element} serializers.
  *
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
@@ -33,7 +33,7 @@ class ElementSerializer {
         @Override
         public Edge read(final Kryo kryo, final Input input, final Class<Edge> edgeClass) {
             final IoEdge ioe = (IoEdge) kryo.readClassAndObject(input);
-            return new CachedEdge(ioe.id, ioe.label, ioe.properties,
+            return new CachedEdge(ioe.id, ioe.label, ioe.properties, ioe.hiddenProperties,
                     Pair.with(ioe.outV, ioe.outVLabel), Pair.with(ioe.inV, ioe.inVLabel));
         }
     }
@@ -56,7 +56,7 @@ class ElementSerializer {
         @Override
         public Vertex read(final Kryo kryo, final Input input, final Class<Vertex> vertexClass) {
             final IoVertex iov = (IoVertex) kryo.readClassAndObject(input);
-            return new CachedVertex(iov.id, iov.label, iov.properties);
+            return new CachedVertex(iov.id, iov.label, iov.properties, iov.hiddenProperties);
         }
     }
 }

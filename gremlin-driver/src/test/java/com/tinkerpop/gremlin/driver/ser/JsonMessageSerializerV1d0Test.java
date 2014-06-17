@@ -12,7 +12,6 @@ import com.tinkerpop.gremlin.tinkergraph.structure.TinkerFactory;
 import com.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -131,12 +130,11 @@ public class JsonMessageSerializerV1d0Test {
         assertEquals("b", innerJsonObject.optString("a"));
     }
 
-    @Ignore
-    // TODO The problem is that when you will need to say whether you want the properties or the hidden properties
+	@Test
     public void serializeHiddenProperties() throws Exception {
         final Graph g = TinkerGraph.open();
         final Vertex v = g.addVertex("abc", 123);
-        v.setProperty(Property.Key.hidden("hidden"), "stephen");
+        v.property(Property.hidden("hidden"), "stephen");
 
         final Iterable iterable = g.V().toList();
         final String results = SERIALIZER.serializeResponseAsString(ResponseMessage.create(msg).result(iterable).build());
@@ -152,14 +150,20 @@ public class JsonMessageSerializerV1d0Test {
         final JSONObject vertexAsJson = converted.optJSONObject(0);
         assertNotNull(vertexAsJson);
 
-        assertEquals(((Long) v.getId()).intValue(), vertexAsJson.get(GraphSONTokens.ID)); // lossy
+        assertEquals(((Long) v.id()).intValue(), vertexAsJson.get(GraphSONTokens.ID)); // lossy
         assertEquals(GraphSONTokens.VERTEX, vertexAsJson.get(GraphSONTokens.TYPE));
 
         final JSONObject properties = vertexAsJson.optJSONObject(GraphSONTokens.PROPERTIES);
         assertNotNull(properties);
 
         assertEquals(123, properties.getInt("abc"));
-        assertEquals("stephen", properties.getString(Property.Key.hidden("hidden")));
+		assertEquals(1, properties.length());
+
+		final JSONObject hiddens = vertexAsJson.optJSONObject(GraphSONTokens.HIDDENS);
+		assertNotNull(hiddens);
+
+		assertEquals("stephen", hiddens.getString("hidden"));
+		assertEquals(1, hiddens.length());
     }
 
     @Test
@@ -168,7 +172,7 @@ public class JsonMessageSerializerV1d0Test {
         final Vertex v1 = g.addVertex();
         final Vertex v2 = g.addVertex();
         final Edge e = v1.addEdge("test", v2);
-        e.setProperty("abc", 123);
+        e.property("abc", 123);
 
         final Iterable<Edge> iterable = g.E().toList();
         final String results = SERIALIZER.serializeResponseAsString(ResponseMessage.create(msg).result(iterable).build());
@@ -185,10 +189,10 @@ public class JsonMessageSerializerV1d0Test {
         final JSONObject edgeAsJson = converted.optJSONObject(0);
         assertNotNull(edgeAsJson);
 
-        assertEquals(((Long) e.getId()).intValue(), edgeAsJson.get(GraphSONTokens.ID));  // lossy
-        assertEquals(((Long) v1.getId()).intValue(), edgeAsJson.get(GraphSONTokens.OUT));// lossy
-        assertEquals(((Long) v2.getId()).intValue(), edgeAsJson.get(GraphSONTokens.IN)); // lossy
-        assertEquals(e.getLabel(), edgeAsJson.get(GraphSONTokens.LABEL));
+        assertEquals(((Long) e.id()).intValue(), edgeAsJson.get(GraphSONTokens.ID));  // lossy
+        assertEquals(((Long) v1.id()).intValue(), edgeAsJson.get(GraphSONTokens.OUT));// lossy
+        assertEquals(((Long) v2.id()).intValue(), edgeAsJson.get(GraphSONTokens.IN)); // lossy
+        assertEquals(e.label(), edgeAsJson.get(GraphSONTokens.LABEL));
         assertEquals(GraphSONTokens.EDGE, edgeAsJson.get(GraphSONTokens.TYPE));
 
         final JSONObject properties = edgeAsJson.optJSONObject(GraphSONTokens.PROPERTIES);
@@ -210,7 +214,7 @@ public class JsonMessageSerializerV1d0Test {
         friends.add(5);
         friends.add(map);
 
-        v.setProperty("friends", friends);
+        v.property("friends", friends);
 
         final Iterable iterable = g.V().toList();
         final String results = SERIALIZER.serializeResponseAsString(ResponseMessage.create(msg).result(iterable).build());

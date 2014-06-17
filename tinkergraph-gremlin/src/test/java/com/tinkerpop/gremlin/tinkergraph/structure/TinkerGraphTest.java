@@ -4,8 +4,6 @@ import com.tinkerpop.gremlin.AbstractGremlinTest;
 import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.util.TraversalHelper;
-import com.tinkerpop.gremlin.structure.AnnotatedList;
-import com.tinkerpop.gremlin.structure.AnnotatedValue;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.IoTest;
@@ -29,7 +27,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -59,11 +56,11 @@ public class TinkerGraphTest implements Serializable {
         g.traversal(TinkerFactory.SocialTraversal.class).people("marko").knows().name().forEach(System.out::println);
 
         /*Graph h = g.compute().program(PageRankVertexProgram.create().getConfiguration()).submit().get().getValue0();
-        System.out.println(h.v(1).getValue(PageRankVertexProgram.PAGE_RANK).toString());
+        System.out.println(h.v(1).value(PageRankVertexProgram.PAGE_RANK).toString());
         Map<String, String> map = new HashMap<>();
         map.put(PageRankVertexProgram.PAGE_RANK, "pageRank");
         TinkerGraphComputer.mergeComputedView(g, h, map);
-        System.out.println(g.v(1).getValue("pageRank").toString());*/
+        System.out.println(g.v(1).value("pageRank").toString());*/
     }
 
     @Test
@@ -72,8 +69,8 @@ public class TinkerGraphTest implements Serializable {
         g.createIndex("name", Vertex.class);
         final Vertex marko = g.addVertex("name", "marko", "age", 33, "blah", "bloop");
         final Vertex stephen = g.addVertex("name", "stephen", "id", 12, "blah", "bloop");
-        stephen.setProperty(Property.Key.hidden("name"), "stephen");
-        assertEquals("stephen", stephen.getProperty(Property.Key.hidden("name")).get());
+        stephen.property(Property.hidden("name"), "stephen");
+        assertEquals("stephen", stephen.property(Property.hidden("name")).value());
         final Random r = new Random();
         Stream.generate(() -> g.addVertex(r.nextBoolean() + "1", r.nextInt(), "name", r.nextInt())).limit(100000).count();
         assertEquals(100002, g.vertices.size());
@@ -82,10 +79,10 @@ public class TinkerGraphTest implements Serializable {
         //System.out.println(marko.out("knows", "workedWith").toString());
         g.createIndex("blah", Vertex.class);
 
-        edge.setProperty("weight", 1.0f);
-        edge.setProperty("creator", "stephen");
-        assertEquals(edge.getValue("weight"), Float.valueOf(1.0f));
-        assertEquals(edge.getProperty("creator").get(), "stephen");
+        edge.property("weight", 1.0f);
+        edge.property("creator", "stephen");
+        assertEquals(edge.value("weight"), Float.valueOf(1.0f));
+        assertEquals(edge.property("creator").value(), "stephen");
 
         //g.V().out().value("name").path().map(p -> p.get().getAsLabels()).forEach(System.out::println);
         //marko.out().path().map(p -> p.get().getAsLabels()).forEach(System.out::println);
@@ -120,9 +117,9 @@ public class TinkerGraphTest implements Serializable {
      */
     @Test
     public void shouldWriteClassicGraphAsGraphML() throws IOException {
-        final OutputStream os = new FileOutputStream(tempPath + "tinkerpop-classic.xml");
-        GraphMLWriter.create().build().writeGraph(os, TinkerFactory.createClassic());
-        os.close();
+        try (final OutputStream os = new FileOutputStream(tempPath + "tinkerpop-classic.xml")) {
+            GraphMLWriter.create().build().writeGraph(os, TinkerFactory.createClassic());
+        }
     }
 
     /**
@@ -204,21 +201,19 @@ public class TinkerGraphTest implements Serializable {
         os.close();
     }
 
-    /* only necessary when the graphml version needs to be adjusted
-    @Test
-    public void shouldWriteGratefulGraphToGraphML() throws IOException {
-        final Graph g = TinkerGraph.open();
 
-        final GraphReader reader = com.tinkerpop.gremlin.structure.io.kryo.KryoReader.create().build();
-        try (final InputStream stream = AbstractGremlinTest.class.getResourceAsStream("/com/tinkerpop/gremlin/structure/util/io/kryo/graph-example-2.gio")) {
+    @Test
+    public void shouldWriteGratefulGraphAsGraphSON() throws IOException {
+        final Graph g = TinkerGraph.open();
+        final GraphReader reader = GraphMLReader.create().build();
+        try (final InputStream stream = AbstractGremlinTest.class.getResourceAsStream("/com/tinkerpop/gremlin/structure/util/io/graphml/grateful-dead.xml")) {
             reader.readGraph(stream, g);
         }
 
-        final OutputStream os = new FileOutputStream("/tmp/graph-example-2.xml");
-        GraphMLWriter.create().build().writeGraph(os, g);
+        final OutputStream os = new FileOutputStream(tempPath + "grateful-dead.json");
+        GraphSONWriter.create().embedTypes(true).build().writeGraph(os, g);
         os.close();
     }
-    */
 
 
     /**
@@ -229,23 +224,6 @@ public class TinkerGraphTest implements Serializable {
         final OutputStream os = new FileOutputStream(tempPath + "tinkerpop-modern.gio");
         KryoWriter.create().build().writeGraph(os, TinkerFactory.createModern());
         os.close();
-    }
-
-    @Test
-    public void shouldValidateAnnotatedList() {
-        final TinkerGraph g = TinkerGraph.open();
-        final Vertex marko = g.addVertex();
-        marko.setProperty("names", AnnotatedList.make());
-        final Property<AnnotatedList<String>> names = marko.getProperty("names");
-        System.out.println(names.get().addValue("marko", "time", 1));
-        names.get().addValue("antonio", "time", 2);
-        names.get().addValue("mrodriguez", "time", 7);
-        System.out.println(names);
-        System.out.println("-------");
-        names.get().annotatedValues().has("time", 1).value().forEach(System.out::println);
-        System.out.println("-------");
-        names.get().annotatedValues().<AnnotatedValue>has("time", 1).forEach(AnnotatedValue::remove);
-        names.get().annotatedValues().value().forEach(System.out::println);
     }
 
     @Test

@@ -1,11 +1,10 @@
 package com.tinkerpop.gremlin.neo4j.structure;
 
-import com.tinkerpop.gremlin.neo4j.process.map.Neo4jGraphStep;
+import com.tinkerpop.gremlin.neo4j.process.step.map.Neo4jGraphStep;
 import com.tinkerpop.gremlin.process.computer.GraphComputer;
 import com.tinkerpop.gremlin.process.graph.DefaultGraphTraversal;
 import com.tinkerpop.gremlin.process.graph.GraphTraversal;
 import com.tinkerpop.gremlin.structure.Edge;
-import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Transaction;
 import com.tinkerpop.gremlin.structure.Vertex;
@@ -20,8 +19,8 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.PropertyContainer;
-import org.neo4j.graphdb.factory.GraphDatabaseBuilder;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
+import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.core.NodeManager;
 
@@ -42,15 +41,8 @@ public class Neo4jGraph implements Graph {
     private GraphDatabaseService rawGraph;
 
     private static final String CONFIG_DIRECTORY = "gremlin.neo4j.directory";
+	private static final String CONFIG_HA = "gremlin.neo4j.ha";
     private static final String CONFIG_CONF = "gremlin.neo4j.conf";
-
-    private static final String INDEXED_KEYS_POSTFIX = ":indexed_keys";
-
-    protected final ThreadLocal<Boolean> checkElementsInTransaction = new ThreadLocal<Boolean>() {
-        protected Boolean initialValue() {
-            return false;
-        }
-    };
 
     private final Neo4jTransaction neo4jTransaction = new Neo4jTransaction();
 
@@ -61,24 +53,21 @@ public class Neo4jGraph implements Graph {
         this.rawGraph = rawGraph;
         transactionManager = ((GraphDatabaseAPI) rawGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
         cypher = new ExecutionEngine(rawGraph);
-
-        // todo: indices were established in init
-        // init();
     }
 
     private Neo4jGraph(final Configuration configuration) {
         try {
-            final String directory = configuration.getString("gremlin.neo4j.directory");
-            final GraphDatabaseBuilder builder = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(directory);
+            final String directory = configuration.getString(CONFIG_DIRECTORY);
+			final Map neo4jSpecificConfig = ConfigurationConverter.getMap(configuration.subset(CONFIG_CONF));
+			final boolean ha = configuration.getBoolean(CONFIG_HA, false);
 
-            final Map neo4jSpecificConfig = ConfigurationConverter.getMap(configuration.subset("gremlin.neo4j.conf"));
-            this.rawGraph = builder.setConfig(neo4jSpecificConfig).newGraphDatabase();
+			// if HA is enabled then use the correct factory to instantiate the GraphDatabaseService
+			this.rawGraph = ha ?
+					new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder(directory).setConfig(neo4jSpecificConfig).newGraphDatabase() :
+					new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(directory).setConfig(neo4jSpecificConfig).newGraphDatabase();
 
             transactionManager = ((GraphDatabaseAPI) rawGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
             cypher = new ExecutionEngine(rawGraph);
-
-            // todo: indices were established in init
-            // init();
 
         } catch (Exception e) {
             if (this.rawGraph != null)
@@ -94,14 +83,13 @@ public class Neo4jGraph implements Graph {
      * @param <G>           the {@link com.tinkerpop.gremlin.structure.Graph} instance
      * @return a newly opened {@link com.tinkerpop.gremlin.structure.Graph}
      */
-    public static <G extends Graph> G open(final Optional<Configuration> configuration) {
+    public static <G extends Graph> G open(final Configuration configuration) {
         if (null == configuration) throw Graph.Exceptions.argumentCanNotBeNull("configuration");
-        final Configuration config = configuration.orElseThrow(() -> Graph.Exceptions.argumentCanNotBeNull("configuration"));
 
-        if (!config.containsKey(CONFIG_DIRECTORY))
+        if (!configuration.containsKey(CONFIG_DIRECTORY))
             throw new IllegalArgumentException(String.format("Neo4j configuration requires that the %s be set", CONFIG_DIRECTORY));
 
-        return (G) new Neo4jGraph(config);
+        return (G) new Neo4jGraph(configuration);
     }
 
     /**
@@ -110,7 +98,7 @@ public class Neo4jGraph implements Graph {
     public static <G extends Graph> G open(final String directory) {
         final Configuration config = new BaseConfiguration();
         config.setProperty(CONFIG_DIRECTORY, directory);
-        return open(Optional.of(config));
+        return open(config);
     }
 
     /**
@@ -126,7 +114,7 @@ public class Neo4jGraph implements Graph {
         if (ElementHelper.getIdValue(keyValues).isPresent())
             throw Vertex.Exceptions.userSuppliedIdsNotSupported();
 
-        final String label = ElementHelper.getLabelValue(keyValues).orElse(Element.DEFAULT_LABEL);
+        final String label = ElementHelper.getLabelValue(keyValues).orElse(Vertex.DEFAULT_LABEL);
 
         this.tx().readWrite();
         final Neo4jVertex vertex = new Neo4jVertex(this.rawGraph.createNode(DynamicLabel.label(label)), this);
@@ -184,7 +172,7 @@ public class Neo4jGraph implements Graph {
 
     @Override
     public <C extends GraphComputer> C compute(final Class<C>... graphComputerClass) {
-        throw Graph.Exceptions.graphComputerNotSupported(); // todo: fix later
+        throw Graph.Exceptions.graphComputerNotSupported();
     }
 
     @Override
@@ -194,7 +182,7 @@ public class Neo4jGraph implements Graph {
 
     @Override
     public <V extends Variables> V variables() {
-        throw Graph.Exceptions.memoryNotSupported(); // todo: fix later
+        throw Graph.Exceptions.variablesNotSupported();
     }
 
     @Override
@@ -341,12 +329,12 @@ public class Neo4jGraph implements Graph {
             return new GraphFeatures() {
                 @Override
                 public boolean supportsComputer() {
-                    return false;  // todo: temporary...
+                    return false;
                 }
 
                 @Override
                 public VariableFeatures memory() {
-                    return new Neo4jVariableFeatures();  // todo: temporary
+                    return new Neo4jVariableFeatures();
                 }
 
                 @Override

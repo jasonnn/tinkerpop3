@@ -2,6 +2,7 @@ package com.tinkerpop.gremlin.structure;
 
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -18,55 +19,104 @@ public abstract interface Element {
 
     public static final String ID = "id";
     public static final String LABEL = "label";
-    public static final String DEFAULT_LABEL = "default";
 
-    public Object getId();
+	/**
+	 * Gets the unique identifier for the graph {@code Element}.
+	 */
+    public Object id();
 
-    public String getLabel();
+	/**
+	 * Gets the label for the graph {@code Element} which helps categorize it.
+	 */
+    public String label();
 
+	/**
+	 * Removes the {@code Element} from the graph.
+	 */
     public void remove();
 
-    // todo: make sure id/label get returned as properties
-
-    public default Set<String> getPropertyKeys() {
-        return this.getProperties().keySet();
+	/**
+	 * Get the keys from non-hidden properties.
+	 */
+    public default Set<String> keys() {
+        return this.properties().keySet();
     }
 
-    public default Set<String> getHiddenKeys() {
-        return this.getHiddens().keySet();
+	/**
+	 * Get the keys of hidden properties.
+	 */
+    public default Set<String> hiddenKeys() {
+        return this.hiddens().keySet();
     }
 
-    public Map<String, Property> getProperties();
+	/**
+	 * Get the values of non-hidden properties as a {@link Map} of keys and values.
+	 */
+    public default Map<String, Object> values() {
+        final Map<String, Object> values = new HashMap<>();
+        this.properties().forEach((k, p) -> values.put(k, p.value()));
+        return values;
+    }
 
-    public Map<String, Property> getHiddens();
+	/**
+	 * Get the values of hidden properties as a {@link Map} of keys and values.
+	 */
+	public default Map<String, Object> hiddenValues() {
+		final Map<String, Object> values = new HashMap<>();
+		this.hiddens().forEach((k, p) -> values.put(k, p.value()));
+		return values;
+	}
 
-    public <V> Property<V> getProperty(final String key);
+	/**
+	 * Get a {@link Map} of non-hidden properties.
+	 */
+    public Map<String, Property> properties();
 
-    public <V> Property<V> setProperty(final String key, final V value);
+	/**
+	 * Get a {@link Map} of hidden properties.
+	 */
+    public Map<String, Property> hiddens();
 
-    public default void setProperties(final Object... keyValues) {
+	/**
+	 * Get a {@link Property} for the {@code Element} given its key.  Hidden properties can be retrieved by specifying
+	 * the key as {@link Property#hidden}.
+	 */
+    public <V> Property<V> property(final String key);
+
+	/**
+	 * Add or set a property value for the {@code Element} given its key.  Hidden properties can be set by specifying
+	 * the key as {@link Property#hidden}.
+	 */
+    public <V> Property<V> property(final String key, final V value);
+
+	/**
+	 * Set a series of properties on the {@code Element} by specifying a series of key/value pairs.  These key/values
+	 * must be provided in an even number where the odd numbered arguments are {@link String} key values and the
+	 * even numbered arguments are the related property values.  Hidden properties can be set by specifying
+	 * the key as {@link Property#hidden}.
+	 */
+    public default void properties(final Object... keyValues) {
         ElementHelper.legalPropertyKeyValueArray(keyValues);
         ElementHelper.attachProperties(this, keyValues);
     }
 
-    public default <V> V getValue(final String key) throws NoSuchElementException {
-        final Property<V> property = this.getProperty(key);
-        if (property.isPresent())
-            return property.get();
-        else throw Property.Exceptions.propertyDoesNotExist(key);
+	/**
+	 * Get the value of a {@link Property} given it's key.
+	 * @throws NoSuchElementException if the property does not exist on the {@code Element}.
+	 */
+    public default <V> V value(final String key) throws NoSuchElementException {
+        final Property<V> property = this.property(key);
+        return property.orElseThrow(() -> Property.Exceptions.propertyDoesNotExist(key));
     }
 
     /*
     // TODO: Are we going down the right road with property as a first-class citizen?
-    public default <V> V getValue(final String key, final V orElse) {
-        final Property<V> property = this.getProperty(key);
+    public default <V> V value(final String key, final V orElse) {
+        final Property<V> property = this.property(key);
         return property.orElse(orElse);
     }*/
 
     public static class Exceptions {
-        public static IllegalArgumentException bothIsNotSupported() {
-            return new IllegalArgumentException("A direction of BOTH is not supported");
-        }
 
         public static IllegalArgumentException providedKeyValuesMustBeAMultipleOfTwo() {
             return new IllegalArgumentException("The provided key/value array must be a multiple of two");

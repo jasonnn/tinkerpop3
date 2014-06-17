@@ -1,6 +1,5 @@
 package com.tinkerpop.gremlin.tinkergraph.structure;
 
-import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.TraversalEngine;
 import com.tinkerpop.gremlin.process.computer.GraphComputer;
 import com.tinkerpop.gremlin.process.graph.DefaultGraphTraversal;
@@ -8,18 +7,19 @@ import com.tinkerpop.gremlin.process.graph.GraphTraversal;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
+import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Transaction;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
 import com.tinkerpop.gremlin.structure.util.StringFactory;
-import com.tinkerpop.gremlin.tinkergraph.process.graph.map.TinkerGraphStep;
-import com.tinkerpop.gremlin.tinkergraph.process.graph.util.optimizers.TinkerGraphStepOptimizer;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.step.map.TinkerGraphStep;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.strategy.ClearTraverserSourceStrategy;
+import com.tinkerpop.gremlin.tinkergraph.process.graph.strategy.TinkerGraphStepTraversalStrategy;
 import org.apache.commons.configuration.Configuration;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -33,7 +33,7 @@ public class TinkerGraph implements Graph, Serializable {
     protected Long currentId = -1l;
     protected Map<Object, Vertex> vertices = new HashMap<>();
     protected Map<Object, Edge> edges = new HashMap<>();
-    protected TinkerGraphVariables variables = new TinkerGraphVariables(this);
+    protected TinkerGraphVariables variables = new TinkerGraphVariables();
     protected TinkerGraphView graphView = null;
     protected boolean useGraphView = false;
 
@@ -56,7 +56,7 @@ public class TinkerGraph implements Graph, Serializable {
      * Test Suite.
      */
     public static TinkerGraph open() {
-        return open(Optional.empty());
+        return open(null);
     }
 
     /**
@@ -75,7 +75,7 @@ public class TinkerGraph implements Graph, Serializable {
      * @param <G>           the {@link com.tinkerpop.gremlin.structure.Graph} instance
      * @return a newly opened {@link com.tinkerpop.gremlin.structure.Graph}
      */
-    public static <G extends Graph> G open(final Optional<Configuration> configuration) {
+    public static <G extends Graph> G open(final Configuration configuration) {
         return (G) new TinkerGraph();
     }
 
@@ -102,13 +102,15 @@ public class TinkerGraph implements Graph, Serializable {
     public GraphTraversal<Vertex, Vertex> V() {
         final GraphTraversal traversal = new DefaultGraphTraversal<Object, Vertex>() {
             public GraphTraversal<Object, Vertex> submit(final TraversalEngine engine) {
-                if (engine instanceof GraphComputer)
-                    this.optimizers().unregister(TinkerGraphStepOptimizer.class);
+                if (engine instanceof GraphComputer) {
+                    this.strategies().unregister(TinkerGraphStepTraversalStrategy.class);
+                    //TODO: this.strategies().register(new ClearTraverserSourceStrategy());
+                }
                 return super.submit(engine);
             }
         };
-        traversal.memory().set(Traversal.Variables.Variable.hidden("g"), this);    // TODO: is this good?
-        traversal.optimizers().register(new TinkerGraphStepOptimizer());
+        traversal.memory().set(Property.hidden("g"), this);    // TODO: is this good?
+        traversal.strategies().register(new TinkerGraphStepTraversalStrategy());
         traversal.addStep(new TinkerGraphStep(traversal, Vertex.class, this));
         return traversal;
     }
@@ -116,12 +118,14 @@ public class TinkerGraph implements Graph, Serializable {
     public GraphTraversal<Edge, Edge> E() {
         final GraphTraversal traversal = new DefaultGraphTraversal<Object, Edge>() {
             public GraphTraversal<Object, Edge> submit(final TraversalEngine engine) {
-                if (engine instanceof GraphComputer)
-                    this.optimizers().unregister(TinkerGraphStepOptimizer.class);
+                if (engine instanceof GraphComputer) {
+                    this.strategies().unregister(TinkerGraphStepTraversalStrategy.class);
+                    // TODO: this.strategies().register(new ClearTraverserSourceStrategy());
+                }
                 return super.submit(engine);
             }
         };
-        traversal.optimizers().register(new TinkerGraphStepOptimizer());
+        traversal.strategies().register(new TinkerGraphStepTraversalStrategy());
         traversal.addStep(new TinkerGraphStep(traversal, Edge.class, this));
         return traversal;
     }
@@ -129,7 +133,7 @@ public class TinkerGraph implements Graph, Serializable {
     public Vertex addVertex(final Object... keyValues) {
         ElementHelper.legalPropertyKeyValueArray(keyValues);
         Object idValue = ElementHelper.getIdValue(keyValues).orElse(null);
-        final String label = ElementHelper.getLabelValue(keyValues).orElse(Element.DEFAULT_LABEL);
+        final String label = ElementHelper.getLabelValue(keyValues).orElse(Vertex.DEFAULT_LABEL);
 
         if (null != idValue) {
             if (this.vertices.containsKey(idValue))
@@ -139,7 +143,7 @@ public class TinkerGraph implements Graph, Serializable {
         }
 
         final Vertex vertex = new TinkerVertex(idValue, label, this);
-        this.vertices.put(vertex.getId(), vertex);
+        this.vertices.put(vertex.id(), vertex);
         ElementHelper.attachProperties(vertex, keyValues);
         return vertex;
     }
@@ -168,7 +172,7 @@ public class TinkerGraph implements Graph, Serializable {
     public void clear() {
         this.vertices.clear();
         this.edges.clear();
-        this.variables = new TinkerGraphVariables(this);
+        this.variables = new TinkerGraphVariables();
         this.currentId = 0l;
         this.vertexIndex = new TinkerIndex<>(this, TinkerVertex.class);
         this.edgeIndex = new TinkerIndex<>(this, TinkerEdge.class);

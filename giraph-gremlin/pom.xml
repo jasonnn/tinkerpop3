@@ -4,27 +4,37 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.tinkerpop.tinkerpop3</groupId>
-        <artifactId>tinkerpop3</artifactId>
+        <groupId>com.tinkerpop</groupId>
+        <artifactId>tinkerpop</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>giraph-gremlin</artifactId>
-    <name>Giraph Gremlin</name>
-    <description>A Gremlin implementation of Giraph</description>
+    <name>Giraph Gremlin: An Implementation of TinkerPop3 for the Giraph Graph Processing System</name>
     <dependencies>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-core</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
+            <artifactId>gremlin-groovy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>tinkergraph-gremlin</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.giraph</groupId>
             <artifactId>giraph-core</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>jline</groupId>
+                    <artifactId>jline</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -36,9 +46,8 @@
             <groupId>commons-httpclient</groupId>
             <artifactId>commons-httpclient</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>com.tinkerpop.tinkerpop3</groupId>
+            <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-test</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -79,6 +88,7 @@
                             <descriptors>
                                 <descriptor>src/assembly/hadoop-job.xml</descriptor>
                                 <descriptor>src/assembly/standalone.xml</descriptor>
+                                <!--<descriptor>src/assembly/fat.xml</descriptor>-->
                             </descriptors>
                             <finalName>${project.artifactId}-${project.version}</finalName>
                         </configuration>

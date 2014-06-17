@@ -2,7 +2,7 @@ package com.tinkerpop.gremlin.process.computer.traversal;
 
 import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.computer.GraphComputer;
-import com.tinkerpop.gremlin.process.util.HolderOptimizer;
+import com.tinkerpop.gremlin.process.graph.strategy.PathConsumerStrategy;
 import com.tinkerpop.gremlin.process.util.MicroPath;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Vertex;
@@ -50,15 +50,15 @@ public class TraversalResult<T> implements Iterator<T> {
     }
 
     private void buildIterator() {
-        if (HolderOptimizer.trackPaths(this.traversalSupplier.get())) {
+        if (PathConsumerStrategy.trackPaths(this.traversalSupplier.get())) {
             this.itty = StreamFactory.stream((Iterator<Vertex>) this.graph.V()).flatMap(vertex -> {
                 return StreamFactory.stream(vertex)
-                        .map(v -> this.result.v(v.getId()).<TraversalPaths>getProperty(TraversalVertexProgram.TRAVERSAL_TRACKER).orElse(null))
+                        .map(v -> this.result.v(v.id()).<TraversalPaths>property(TraversalVertexProgram.TRAVERSER_TRACKER).orElse(null))
                         .filter(tracker -> null != tracker)
                         .flatMap(tracker -> {
                             final List list = new ArrayList();
                             tracker.getDoneObjectTracks().entrySet().stream().forEach(entry -> {
-                                entry.getValue().forEach(holder -> {
+                                entry.getValue().forEach(traverser -> {
                                     if (entry.getKey() instanceof MicroPath) {
                                         list.add(((MicroPath) entry.getKey()).inflate(this.graph));
                                     } else {
@@ -67,7 +67,7 @@ public class TraversalResult<T> implements Iterator<T> {
                                 });
                             });
                             tracker.getDoneGraphTracks().entrySet().stream().forEach(entry -> {
-                                entry.getValue().forEach(holder -> list.add(holder.inflate(vertex).get()));
+                                entry.getValue().forEach(traverser -> list.add(traverser.inflate(vertex).get()));
                             });
                             return list.stream();
                         });
@@ -75,7 +75,7 @@ public class TraversalResult<T> implements Iterator<T> {
         } else {
             this.itty = StreamFactory.stream((Iterator<Vertex>) this.graph.V()).flatMap(vertex -> {
                 return StreamFactory.stream(vertex)
-                        .map(v -> this.result.v(v.getId()).<TraversalCounters>getProperty(TraversalVertexProgram.TRAVERSAL_TRACKER).orElse(null))
+                        .map(v -> this.result.v(v.id()).<TraversalCounters>property(TraversalVertexProgram.TRAVERSER_TRACKER).orElse(null))
                         .filter(tracker -> null != tracker)
                         .flatMap(tracker -> {
                             final List list = new ArrayList();

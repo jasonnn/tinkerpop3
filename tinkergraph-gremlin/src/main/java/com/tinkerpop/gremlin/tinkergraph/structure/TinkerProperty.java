@@ -1,6 +1,7 @@
 package com.tinkerpop.gremlin.tinkergraph.structure;
 
 import com.tinkerpop.gremlin.structure.Element;
+import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
@@ -29,16 +30,20 @@ public class TinkerProperty<V> implements Property<V>, Serializable {
         return (E) this.element;
     }
 
-    public String getKey() {
-        return this.key;
+    public String key() {
+        return ElementHelper.removeHiddenPrefix(this.key);
     }
 
-    public V get() {
+    public V value() {
         return this.value;
     }
 
     public boolean isPresent() {
         return null != this.value;
+    }
+
+    public boolean isHidden() {
+       return this.key.startsWith(Graph.HIDDEN_PREFIX);
     }
 
     public String toString() {

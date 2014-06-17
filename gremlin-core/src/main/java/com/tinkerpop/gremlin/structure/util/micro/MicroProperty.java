@@ -31,8 +31,8 @@ public class MicroProperty<V> implements Property, Serializable {
         if (null == property)
             throw Graph.Exceptions.argumentCanNotBeNull("property");
 
-        this.key = property.getKey();
-        this.value = (V) property.get();
+        this.key = property.key();
+        this.value = (V) property.value();
         this.hashCode = property.hashCode();
         this.element = property.getElement() instanceof Vertex ?
                 MicroVertex.deflate((Vertex) property.getElement()) :
@@ -43,11 +43,15 @@ public class MicroProperty<V> implements Property, Serializable {
         return true;
     }
 
-    public String getKey() {
-        return this.key;
+    public String key() {
+        return ElementHelper.removeHiddenPrefix(this.key);
     }
 
-    public V get() {
+    public boolean isHidden() {
+        return this.key.startsWith(Graph.HIDDEN_PREFIX);
+    }
+
+    public V value() {
         return this.value;
     }
 
@@ -73,24 +77,24 @@ public class MicroProperty<V> implements Property, Serializable {
 
     public Property<V> inflate(final Vertex hostVertex) {
         if (this.getElement() instanceof Vertex) {
-            return Optional.<Property<V>>of(hostVertex.getProperty(this.key)).orElseThrow(() -> new IllegalStateException("The micro property could not be be found at the provided vertex"));
+            return Optional.<Property<V>>of(hostVertex.property(this.key)).orElseThrow(() -> new IllegalStateException("The micro property could not be be found at the provided vertex"));
         } else {
-            final String label = this.getElement().getLabel();
-            final Object id = this.getElement().getId();
+            final String label = this.getElement().label();
+            final Object id = this.getElement().id();
             return StreamFactory.stream((Iterator<Edge>) hostVertex.outE(label))
-                    .filter(e -> e.getId().equals(id))
+                    .filter(e -> e.id().equals(id))
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException("The micro property could not be be found at the provided vertex's edges"))
-                    .getProperty(this.getKey());
+                    .property(this.key());
 
         }
     }
 
     public Property<V> inflate(final Graph graph) {
         final Element element = (this.getElement() instanceof Vertex) ?
-                graph.v(this.getElement().getId()) :
-                graph.e(this.getElement().getId());
-        return Optional.<Property<V>>of(element.getProperty(this.key)).orElseThrow(() -> new IllegalStateException("The micro property could not be found at the provided graph"));
+                graph.v(this.getElement().id()) :
+                graph.e(this.getElement().id());
+        return Optional.<Property<V>>of(element.property(this.key)).orElseThrow(() -> new IllegalStateException("The micro property could not be found at the provided graph"));
     }
 
     public static MicroProperty deflate(final Property property) {

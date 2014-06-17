@@ -19,12 +19,14 @@ public abstract class CachedElement implements Element {
     protected final Object id;
     protected final String label;
     protected final Optional<Map<String, Property>> properties;
+	protected final Optional<Map<String, Property>> hiddenProperties;
 
     protected CachedElement(final Object id, final String label) {
-        this(id, label, null);
+        this(id, label, null, null);
     }
 
-    protected CachedElement(final Object id, final String label, final Map<String, Object> properties) {
+    protected CachedElement(final Object id, final String label, final Map<String, Object> properties,
+							final Map<String, Object> hiddenProperties) {
         if (null == id) throw Graph.Exceptions.argumentCanNotBeNull("id");
         if (null == label) throw Graph.Exceptions.argumentCanNotBeNull("label");
 
@@ -42,34 +44,46 @@ public abstract class CachedElement implements Element {
                     }).collect(Collectors.toMap(p -> p.getValue0(), p -> p.getValue1())));
         }
 
+		if (null == properties)
+			this.hiddenProperties = Optional.empty();
+		else {
+			this.hiddenProperties = Optional.of(hiddenProperties.entrySet().stream()
+					.map(entry -> {
+						if (entry.getValue() instanceof Property)
+							return Pair.with(entry.getKey(), new CachedProperty((Property) entry.getValue()));
+						else
+							return Pair.with(entry.getKey(), new CachedProperty(entry.getKey(), entry.getValue(), this));
+					}).collect(Collectors.toMap(p -> p.getValue0(), p -> p.getValue1())));
+		}
     }
 
     protected CachedElement(final Element element) {
         if (null == element) throw Graph.Exceptions.argumentCanNotBeNull("element");
 
-        this.id = element.getId();
-        this.label = element.getLabel();
-        this.properties = Optional.ofNullable(element.getProperties());
+        this.id = element.id();
+        this.label = element.label();
+        this.properties = Optional.ofNullable(element.properties());
+		this.hiddenProperties = Optional.ofNullable(element.hiddens());
     }
 
-    public Object getId() {
+    public Object id() {
         return this.id;
     }
 
-    public String getLabel() {
+    public String label() {
         return this.label;
     }
 
-    public Property setProperty(final String key, final Object value) {
+    public Property property(final String key, final Object value) {
         throw new UnsupportedOperationException("Cached elements are read-only: " + this.toString());
     }
 
-    public <V> Property<V> getProperty(final String key) {
+    public <V> Property<V> property(final String key) {
         return this.properties.orElseThrow(() -> new IllegalStateException("Properties not assigned to this element which means it is likely a CachedVertex on a CachedEdge"))
                 .getOrDefault(key, Property.empty());
     }
 
-    public Map<String, Property> getProperties() {
+    public Map<String, Property> properties() {
         final Map<String, Property> temp = new HashMap<>();
         this.properties.orElseThrow(() -> new IllegalStateException("Properties not assigned to this element which means it is likely a CachedVertex on a CachedEdge"));
         this.properties.get().forEach((key, property) -> {
@@ -79,7 +93,7 @@ public abstract class CachedElement implements Element {
         return temp;
     }
 
-    public Map<String, Property> getHiddens() {
+    public Map<String, Property> hiddens() {
         final Map<String, Property> temp = new HashMap<>();
         this.properties.orElseThrow(() -> new IllegalStateException("Properties not assigned to this element which means it is likely a CachedVertex on a CachedEdge"));
         this.properties.get().forEach((key, property) -> {

@@ -1,11 +1,10 @@
 package com.tinkerpop.gremlin.structure.io.graphson;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.DefaultSerializerProvider;
-
-import java.util.Optional;
 
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
@@ -28,11 +27,14 @@ public class GraphSONObjectMapper extends ObjectMapper {
         setSerializerProvider(provider);
 
         registerModule(new GraphSONModule(normalize));
-        Optional.ofNullable(custom).ifPresent(this::registerModule);
+        if (custom != null) this.registerModule(custom);
 
         // plugin external serialization modules
         if (loadCustomSerializers)
             findAndRegisterModules();
+
+        // keep streams open to accept multiple values (e.g. multiple vertices)
+        _jsonFactory.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
     }
 
     public static Builder create() {

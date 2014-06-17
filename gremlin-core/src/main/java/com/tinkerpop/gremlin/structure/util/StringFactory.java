@@ -1,8 +1,5 @@
 package com.tinkerpop.gremlin.structure.util;
 
-import com.tinkerpop.gremlin.structure.AnnotatedList;
-import com.tinkerpop.gremlin.structure.AnnotatedValue;
-import com.tinkerpop.gremlin.structure.Direction;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Property;
@@ -12,8 +9,6 @@ import org.javatuples.Pair;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -48,21 +43,21 @@ public class StringFactory {
      * Construct the representation for a {@link com.tinkerpop.gremlin.structure.Vertex}.
      */
     public static String vertexString(final Vertex vertex) {
-        return V + L_BRACKET + vertex.getId() + R_BRACKET;
+        return V + L_BRACKET + vertex.id() + R_BRACKET;
     }
 
     /**
      * Construct the representation for a {@link com.tinkerpop.gremlin.structure.Edge}.
      */
     public static String edgeString(final Edge edge) {
-        return E + L_BRACKET + edge.getId() + R_BRACKET + L_BRACKET + edge.getVertex(Direction.OUT).getId() + DASH + edge.getLabel() + ARROW + edge.getVertex(Direction.IN).getId() + R_BRACKET;
+        return E + L_BRACKET + edge.id() + R_BRACKET + L_BRACKET + edge.outV().next().id() + DASH + edge.label() + ARROW + edge.inV().next().id() + R_BRACKET;
     }
 
     /**
      * Construct the representation for a {@link com.tinkerpop.gremlin.structure.Property}.
      */
     public static String propertyString(final Property property) {
-        return property.isPresent() ? P + L_BRACKET + property.getKey() + ARROW + property.get() + R_BRACKET : EMPTY_PROPERTY;
+        return property.isPresent() ? P + L_BRACKET + property.key() + ARROW + property.value() + R_BRACKET : EMPTY_PROPERTY;
     }
 
     /**
@@ -74,33 +69,8 @@ public class StringFactory {
         return graph.getClass().getSimpleName().toLowerCase() + L_BRACKET + internalString + R_BRACKET;
     }
 
-    /**
-     * Construct the representation for a {@link com.tinkerpop.gremlin.structure.AnnotatedList}.
-     */
-    public static String annotatedListString(final AnnotatedList<?> annotatedList) {
-        final StringBuilder builder = new StringBuilder(L_BRACKET);
-        annotatedList.values().range(0, 1).forEach(v -> builder.append(v).append(COMMA_SPACE));
-        if (builder.length() > 1)
-            builder.append(DOTS);
-        builder.append(R_BRACKET);
-        return builder.toString();
-    }
-
-    /**
-     * Construct the representation for a {@link com.tinkerpop.gremlin.structure.AnnotatedValue}.
-     */
-    public static String annotatedValueString(final AnnotatedValue<?> annotatedValue) {
-        final Map<String, Object> annotations = new HashMap<>();
-        annotatedValue.getAnnotationKeys().forEach(key -> annotations.put(key, annotatedValue.getAnnotation(key).get()));
-        return L_BRACKET + annotatedValue.getValue() + COLON + annotations.toString() + R_BRACKET;
-    }
-
-    /**
-     * Construct the representation for a {@link com.tinkerpop.gremlin.structure.Graph.Variables}.
-     */
-    public static String memoryString(final Graph.Variables variables) {
-        // todo: should this be owned by the implementation...it won't be consistent
-        return variables.toString();
+    public static String graphVariablesString(final Graph.Variables variables) {
+        return  "variables" + L_BRACKET + "size:" + variables.keys().size() + R_BRACKET;
     }
 
     public static String featureString(final Graph.Features features) {
@@ -126,7 +96,7 @@ public class StringFactory {
     }
 
     private static Function<Method, String> createTransform(final Graph.Features.FeatureSet features) {
-        return FunctionUtils.wrapFunction((m) ->  ">-- " + m.getName().substring(prefixLength) + ": " + m.invoke(features, null).toString() + LINE_SEPARATOR);
+        return FunctionUtils.wrapFunction((m) -> ">-- " + m.getName().substring(prefixLength) + ": " + m.invoke(features, null).toString() + LINE_SEPARATOR);
     }
 
     private static void printFeatureTitle(final Class<? extends Graph.Features.FeatureSet> featureClass, final StringBuilder sb) {

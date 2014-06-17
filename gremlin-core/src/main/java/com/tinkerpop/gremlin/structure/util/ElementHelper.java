@@ -27,6 +27,10 @@ import java.util.stream.Stream;
  */
 public class ElementHelper {
 
+    public static String removeHiddenPrefix(final String key) {
+        return key.startsWith(Graph.HIDDEN_PREFIX) ? key.substring(Graph.HIDDEN_PREFIX.length()) : key;
+    }
+
     public static Vertex getOrAddVertex(final Graph graph, final Object id, final String label) {
         try {
             return graph.v(id);
@@ -190,7 +194,7 @@ public class ElementHelper {
 
         for (int i = 0; i < propertyKeyValues.length; i = i + 2) {
             if (!propertyKeyValues[i].equals(Element.ID) && !propertyKeyValues[i].equals(Element.LABEL))
-                element.setProperty((String) propertyKeyValues[i], propertyKeyValues[i + 1]);
+                element.property((String) propertyKeyValues[i], propertyKeyValues[i + 1]);
         }
     }
 
@@ -217,14 +221,14 @@ public class ElementHelper {
     }
 
     /**
-     * Simply tests if the value returned from {@link com.tinkerpop.gremlin.structure.Element#getId()} are {@code equal()}.
+     * Simply tests if the value returned from {@link com.tinkerpop.gremlin.structure.Element#id()} are {@code equal()}.
      *
      * @param a the first {@link com.tinkerpop.gremlin.structure.Element}
      * @param b the second {@link com.tinkerpop.gremlin.structure.Element}
      * @return true if ids are equal and false otherwise
      */
     public static boolean haveEqualIds(final Element a, final Element b) {
-        return a.getId().equals(b.getId());
+        return a.id().equals(b.id());
     }
 
     /**
@@ -249,22 +253,22 @@ public class ElementHelper {
             return true;
         if (!a.isPresent() && ((Property) b).isPresent() || a.isPresent() && !((Property) b).isPresent())
             return false;
-        return a.getKey().equals(((Property) b).getKey()) && a.get().equals(((Property) b).get()) && areEqual(a.getElement(), ((Property) b).getElement());
+        return a.key().equals(((Property) b).key()) && a.value().equals(((Property) b).value()) && areEqual(a.getElement(), ((Property) b).getElement());
 
     }
 
     public static Map<String, Object> propertyMap(final Element element, final String... propertyKeys) {
         final Map<String, Object> values = new HashMap<>();
         if (null == propertyKeys || propertyKeys.length == 0) {
-            element.getPropertyKeys().forEach(key -> values.put(key, element.getValue(key)));
+            element.keys().forEach(key -> values.put(key, element.value(key)));
         } else {
             for (final String key : propertyKeys) {
                 if (key.equals(Element.ID))
-                    values.put(Element.ID, element.getId());
+                    values.put(Element.ID, element.id());
                 else if (key.equals(Element.LABEL))
-                    values.put(Element.LABEL, element.getLabel());
+                    values.put(Element.LABEL, element.label());
                 else
-                    element.getProperty(key).ifPresent(v -> values.put(key, v));
+                    element.property(key).ifPresent(v -> values.put(key, v));
             }
         }
         return values;

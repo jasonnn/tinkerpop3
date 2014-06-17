@@ -5,8 +5,11 @@ import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.util.function.TriFunction;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -29,11 +32,16 @@ public class ReadOnlyGraphStrategy implements GraphStrategy {
     }
 
     @Override
-    public <V> UnaryOperator<BiFunction<String, V, Property<V>>> getElementSetProperty(Strategy.Context<? extends StrategyWrappedElement> ctx) {
+    public <V> UnaryOperator<BiFunction<String, V, Property<V>>> getElementProperty(Strategy.Context<? extends StrategyWrappedElement> ctx) {
         return readOnlyBiFunction();
     }
 
-    @Override
+	@Override
+	public UnaryOperator<Consumer<Object[]>> getElementPropertiesSetter(Strategy.Context<? extends StrategyWrappedElement> ctx) {
+		return (f) -> (t) -> { throw Exceptions.graphUsesReadOnlyStrategy(); };
+	}
+
+	@Override
     public UnaryOperator<Supplier<Void>> getRemoveElementStrategy(final Strategy.Context<? extends StrategyWrappedElement> ctx) {
         return readOnlySupplier();
     }
@@ -42,6 +50,21 @@ public class ReadOnlyGraphStrategy implements GraphStrategy {
     public <V> UnaryOperator<Supplier<Void>> getRemovePropertyStrategy(final Strategy.Context<StrategyWrappedProperty<V>> ctx) {
         return readOnlySupplier();
     }
+
+	@Override
+	public UnaryOperator<BiConsumer<String, Object>> getVariableSetStrategy(Strategy.Context<StrategyWrappedVariables> ctx) {
+		return (f) -> (k,v) -> { throw Exceptions.graphUsesReadOnlyStrategy(); };
+	}
+
+	@Override
+	public UnaryOperator<Supplier<Map<String, Object>>> getVariableAsMapStrategy(Strategy.Context<StrategyWrappedVariables> ctx) {
+		return (f) -> () -> Collections.unmodifiableMap(f.get());
+	}
+
+	@Override
+	public String toString() {
+		return ReadOnlyGraphStrategy.class.getSimpleName().toLowerCase();
+	}
 
     public static <T> UnaryOperator<Supplier<T>> readOnlySupplier() {
         return (f) -> () -> { throw Exceptions.graphUsesReadOnlyStrategy(); };

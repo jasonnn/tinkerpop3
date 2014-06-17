@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  */
 public interface GraphComputer extends TraversalEngine {
 
-    String VERTEX_PROGRAM = "gremlin.vertexProgram";
+    public static String VERTEX_PROGRAM = "gremlin.vertexProgram";
 
     public enum Isolation {
         /**
@@ -31,7 +31,7 @@ public interface GraphComputer extends TraversalEngine {
          */
         BSP,
         /**
-         * Computations are carried out in a bulk synchronous manner.
+         * Computations are carried out in an bulk asynchronous manner.
          * The results of a vertex property update are visible before the end of the round.
          */
         DIRTY_BSP
@@ -39,26 +39,24 @@ public interface GraphComputer extends TraversalEngine {
 
     public GraphComputer isolation(final Isolation isolation);
 
-    // TODO: operation(onOriginal, clone, ??)
-
     public GraphComputer program(final Configuration configuration);
 
-    public Future<Pair<Graph, SideEffects>> submit();
+    public Future<Pair<Graph, Globals>> submit();
 
     public static void mergeComputedView(final Graph original, final Graph computed, Map<String, String> keyMapping) {
         throw new IllegalStateException("The mergeComputedView method must be defined by the implementing GraphComputer class");
     }
 
-    public interface SideEffects {
+    public interface Globals {
 
-        public Set<String> getVariables();
+        public Set<String> keys();
 
-        public <R> R get(final String variable);
+        public <R> R get(final String key);
 
-        public void set(final String variable, Object value);
+        public void set(final String key, Object value);
 
         public default Map<String, Object> asMap() {
-            final Map<String, Object> map = getVariables().stream()
+            final Map<String, Object> map = keys().stream()
                     .map(key -> Pair.<String, Object>with(key, get(key)))
                     .collect(Collectors.toMap(kv -> kv.getValue0(), Pair::getValue1));
             return Collections.unmodifiableMap(map);
@@ -68,19 +66,19 @@ public interface GraphComputer extends TraversalEngine {
 
         public long getRuntime();
 
-        public void setIfAbsent(final String variable, final Object value);
+        public void setIfAbsent(final String key, final Object value);
 
-        public long incr(final String variable, final long delta);
+        public long incr(final String key, final long delta);
 
-        public boolean and(final String variable, final boolean bool);
+        public boolean and(final String key, final boolean bool);
 
-        public boolean or(final String variable, final boolean bool);
+        public boolean or(final String key, final boolean bool);
 
         public default boolean isInitialIteration() {
             return this.getIteration() == 0;
         }
 
-        public interface Administrative extends SideEffects {
+        public interface Administrative extends Globals {
 
             public void incrIteration();
 
@@ -90,20 +88,20 @@ public interface GraphComputer extends TraversalEngine {
 
         public static class Exceptions {
 
-            public static IllegalArgumentException sideEffectVariableCanNotBeEmpty() {
-                return new IllegalArgumentException("Graph computer side-effect variables can not be the empty string");
+            public static IllegalArgumentException globalKeyCanNotBeEmpty() {
+                return new IllegalArgumentException("Graph computer global key can not be the empty string");
             }
 
-            public static IllegalArgumentException sideEffectVariableCanNotBeNull() {
-                return new IllegalArgumentException("Graph computer side-effect variables can not be null");
+            public static IllegalArgumentException globalKeyCanNotBeNull() {
+                return new IllegalArgumentException("Graph computer global key can not be null");
             }
 
-            public static IllegalArgumentException sideEffectValueCanNotBeNull() {
-                return new IllegalArgumentException("Graph computer side-effect value can not be null");
+            public static IllegalArgumentException globalValueCanNotBeNull() {
+                return new IllegalArgumentException("Graph computer global value can not be null");
             }
 
-            public static UnsupportedOperationException dataTypeOfSideEffectValueNotSupported(final Object val) {
-                return new UnsupportedOperationException(String.format("Graph computer side-effect value [%s] is of type %s is not supported", val, val.getClass()));
+            public static UnsupportedOperationException dataTypeOfGlobalValueNotSupported(final Object val) {
+                return new UnsupportedOperationException(String.format("Graph computer global value [%s] is of type %s is not supported", val, val.getClass()));
             }
         }
 

@@ -26,7 +26,7 @@ abstract class Neo4jElement implements Element {
     }
 
     @Override
-    public Object getId() {
+    public Object id() {
         this.graph.tx().readWrite();
         if (this.rawElement instanceof Node)
             return ((Node) this.rawElement).getId();
@@ -35,7 +35,7 @@ abstract class Neo4jElement implements Element {
     }
 
     @Override
-    public String getLabel() {
+    public String label() {
         this.graph.tx().readWrite();
         // todo: what to do when there are multiple labels on a vertex!!! harden the approach below
         if (this.rawElement instanceof Node)
@@ -45,25 +45,23 @@ abstract class Neo4jElement implements Element {
     }
 
     @Override
-    public Map<String, Property> getProperties() {
+    public Map<String, Property> properties() {
         this.graph.tx().readWrite();
-        return getPropertyKeys().stream()
-                .filter(key -> !key.startsWith(Graph.HIDDEN_PREFIX))
+        return keys().stream()
                 .map(key -> Pair.<String, Property>with(key, new Neo4jProperty<>(this, key, this.rawElement.getProperty(key))))
                 .collect(Collectors.toMap(kv -> kv.getValue0(), kv -> kv.getValue1()));
     }
 
     @Override
-    public Map<String, Property> getHiddens() {
+    public Map<String, Property> hiddens() {
         this.graph.tx().readWrite();
-        return getPropertyKeys().stream()
-                .filter(key -> key.startsWith(Graph.HIDDEN_PREFIX))
-                .map(key -> Pair.<String, Property>with(key, new Neo4jProperty<>(this, key, this.rawElement.getProperty(key))))
+        return hiddenKeys().stream()
+                .map(key -> Pair.<String, Property>with(key, new Neo4jProperty<>(this, key, this.rawElement.getProperty(Property.hidden(key)))))
                 .collect(Collectors.toMap(kv -> kv.getValue0(), kv -> kv.getValue1()));
     }
 
     @Override
-    public Set<String> getPropertyKeys() {
+    public Set<String> keys() {
         this.graph.tx().readWrite();
         final Set<String> keys = new HashSet<>();
         for (final String key : this.rawElement.getPropertyKeys()) {
@@ -74,21 +72,20 @@ abstract class Neo4jElement implements Element {
     }
 
     @Override
-    public Set<String> getHiddenKeys() {
+    public Set<String> hiddenKeys() {
         this.graph.tx().readWrite();
         final Set<String> keys = new HashSet<>();
         for (final String key : this.rawElement.getPropertyKeys()) {
             if (key.startsWith(Graph.HIDDEN_PREFIX))
-                keys.add(key);
+                keys.add(ElementHelper.removeHiddenPrefix(key));
         }
         return keys;
     }
 
     @Override
-    public <V> Property<V> getProperty(final String key) {
+    public <V> Property<V> property(final String key) {
         this.graph.tx().readWrite();
 
-        // todo: do we stil convert collection down to array?? - return (T) tryConvertCollectionToArrayList(this.rawElement.getProperty(key));
         if (this.rawElement.hasProperty(key))
             return new Neo4jProperty<>(this, key, (V) this.rawElement.getProperty(key));
         else
@@ -96,12 +93,9 @@ abstract class Neo4jElement implements Element {
     }
 
     @Override
-    public <V> Property<V> setProperty(final String key, final V value) {
+    public <V> Property<V> property(final String key, final V value) {
         ElementHelper.validateProperty(key, value);
         this.graph.tx().readWrite();
-
-        // todo: deal with annotatedlist/value
-        // todo: do we worry about - this.rawElement.setProperty(key, tryConvertCollectionToArray(value));
 
         try {
             this.rawElement.setProperty(key, value);
@@ -116,7 +110,7 @@ abstract class Neo4jElement implements Element {
     }
 
     public int hashCode() {
-        return this.getId().hashCode();
+        return this.id().hashCode();
     }
 
     public PropertyContainer getRawElement() {
