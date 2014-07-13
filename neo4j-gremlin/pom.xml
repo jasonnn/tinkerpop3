@@ -39,10 +39,20 @@
         </dependency>
         <dependency>
             <groupId>org.neo4j</groupId>
+            <artifactId>neo4j-kernel</artifactId>
+            <version>${neo4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j</groupId>
             <artifactId>neo4j-management</artifactId>
             <version>${neo4j.version}</version>
             <scope>compile</scope>
         </dependency>
+        <!--<dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>javax.transaction-api</artifactId>
+            <version>1.2</version>
+        </dependency>-->
         <dependency>
             <groupId>com.tinkerpop</groupId>
             <artifactId>gremlin-test</artifactId>

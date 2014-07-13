@@ -25,9 +25,6 @@ import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
 import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.kernel.impl.core.NodeManager;
 
-import javax.transaction.Status;
-import javax.transaction.SystemException;
-import javax.transaction.TransactionManager;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -47,12 +44,10 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
 
     private final Neo4jTransaction neo4jTransaction = new Neo4jTransaction();
 
-    protected final TransactionManager transactionManager;
     private final ExecutionEngine cypher;
 
     private Neo4jGraph(final GraphDatabaseService baseGraph) {
         this.baseGraph = baseGraph;
-        transactionManager = ((GraphDatabaseAPI) baseGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
         cypher = new ExecutionEngine(baseGraph);
     }
 
@@ -67,7 +62,6 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
                     new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder(directory).setConfig(neo4jSpecificConfig).newGraphDatabase() :
                     new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(directory).setConfig(neo4jSpecificConfig).newGraphDatabase();
 
-            transactionManager = ((GraphDatabaseAPI) baseGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
             cypher = new ExecutionEngine(baseGraph);
 
         } catch (Exception e) {
@@ -214,7 +208,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     }
 
     private PropertyContainer getGraphProperties() {
-        return ((GraphDatabaseAPI) this.baseGraph).getDependencyResolver().resolveDependency(NodeManager.class).getGraphProperties();
+        return ((GraphDatabaseAPI) this.baseGraph).getDependencyResolver().resolveDependency(NodeManager.class).newGraphProperties();
     }
 
     private static Long evaluateToLong(final Object id) throws NumberFormatException {
@@ -272,18 +266,8 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
             if (!isOpen())
                 return;
 
-            try {
-                javax.transaction.Transaction t = transactionManager.getTransaction();
-                if (null == t || t.getStatus() == Status.STATUS_ROLLEDBACK)
-                    return;
-
-                threadLocalTx.get().failure();
-            } catch (SystemException e) {
-                throw new RuntimeException(e); // todo: generalize and make consistent
-            } finally {
-                threadLocalTx.get().close();
-                threadLocalTx.remove();
-            }
+            threadLocalTx.get().close();
+            threadLocalTx.remove();
         }
 
         @Override
