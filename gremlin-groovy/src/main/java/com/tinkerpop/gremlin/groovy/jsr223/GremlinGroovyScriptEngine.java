@@ -1,7 +1,6 @@
 package com.tinkerpop.gremlin.groovy.jsr223;
 
 import com.tinkerpop.gremlin.groovy.DefaultImportCustomizerProvider;
-import com.tinkerpop.gremlin.groovy.loaders.GremlinLoader;
 import com.tinkerpop.gremlin.groovy.ImportCustomizerProvider;
 import com.tinkerpop.gremlin.groovy.SecurityCustomizerProvider;
 import com.tinkerpop.gremlin.groovy.plugin.GremlinPlugin;
@@ -107,7 +106,7 @@ public class GremlinGroovyScriptEngine extends GroovyScriptEngineImpl implements
     }
 
     public GremlinGroovyScriptEngine(final ImportCustomizerProvider importCustomizerProvider, final SecurityCustomizerProvider securityCustomizerProvider) {
-        GremlinLoader.load();
+        //GremlinLoader.load();
         this.importCustomizerProvider = importCustomizerProvider;
         this.securityProvider = Optional.ofNullable(securityCustomizerProvider);
         createClassLoader();

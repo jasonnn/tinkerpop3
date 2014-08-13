@@ -1,0 +1,3 @@
+moduleName=hadoop-extensions
+moduleVersion=1.0
+extensionClasses=com.tinkerpop.gremlin.giraph.groovy.plugin.HadoopExtensions

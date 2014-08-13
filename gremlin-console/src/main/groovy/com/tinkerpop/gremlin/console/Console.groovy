@@ -7,7 +7,7 @@ import com.tinkerpop.gremlin.console.commands.SubmitCommand
 import com.tinkerpop.gremlin.console.commands.UninstallCommand
 import com.tinkerpop.gremlin.console.plugin.PluggedIn
 import com.tinkerpop.gremlin.console.util.ArrayIterator
-import com.tinkerpop.gremlin.groovy.loaders.GremlinLoader
+//import com.tinkerpop.gremlin.groovy.loaders.GremlinLoader
 import com.tinkerpop.gremlin.groovy.plugin.GremlinPlugin
 import jline.console.history.FileHistory
 import org.codehaus.groovy.tools.shell.ExitNotification
@@ -71,7 +71,7 @@ class Console {
             io.err.println("Unable to create history file: " + HISTORY_FILE)
         }
 
-        GremlinLoader.load()
+        //GremlinLoader.load()
 
         // check for available plugins.  if they are in the "active" plugins list then "activate" them
         def activePlugins = Mediator.readPluginState()

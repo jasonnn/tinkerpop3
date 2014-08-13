@@ -1,7 +1,6 @@
 package com.tinkerpop.gremlin.groovy.util
 
 import com.tinkerpop.gremlin.groovy.jsr223.GremlinGroovyScriptEngine
-import com.tinkerpop.gremlin.groovy.loaders.GremlinLoader
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized.Parameter
@@ -54,7 +53,7 @@ class GremlinHelperTest {
     public List bindingsNames
 
     static {
-        GremlinLoader.load()
+       // GremlinLoader.load()
     }
 
     @Test
