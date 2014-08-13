@@ -1,0 +1,3 @@
+moduleName=hadoop-extensions
+moduleVersion=1.0
+extensionClasses=com.tinkerpop.gremlin.groovy.extensions.SerializationExtensions,com.tinkerpop.gremlin.groovy.extensions.MiscExtensions,com.tinkerpop.gremlin.groovy.extensions.GraphTraversalExtensions,com.tinkerpop.gremlin.groovy.extensions.MopExtensions

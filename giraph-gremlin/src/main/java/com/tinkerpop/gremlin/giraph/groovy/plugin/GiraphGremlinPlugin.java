@@ -60,7 +60,7 @@ public class GiraphGremlinPlugin extends AbstractGremlinPlugin {
             pluginAcceptor.eval(String.format("Logger.getLogger(%s).setLevel(Level.INFO)", JobClient.class.getName()));
             pluginAcceptor.eval(String.format("Logger.getLogger(%s).setLevel(Level.INFO)", GiraphGraphComputer.class.getName()));
             pluginAcceptor.eval(String.format("Logger.getLogger(%s).setLevel(Level.INFO)", GiraphJob.class.getName()));
-            pluginAcceptor.eval(HadoopLoader.class.getCanonicalName() + ".load()");
+           // pluginAcceptor.eval(HadoopLoader.class.getCanonicalName() + ".load()");
 
             pluginAcceptor.addBinding("hdfs", FileSystem.get(new Configuration()));
             pluginAcceptor.addBinding("local", FileSystem.getLocal(new Configuration()));

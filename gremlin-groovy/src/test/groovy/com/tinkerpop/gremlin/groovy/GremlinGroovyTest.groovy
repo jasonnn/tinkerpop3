@@ -1,6 +1,5 @@
 package com.tinkerpop.gremlin.groovy
 
-import com.tinkerpop.gremlin.groovy.loaders.GremlinLoader
 import com.tinkerpop.gremlin.structure.Graph
 import groovy.grape.Grape
 import org.codehaus.groovy.jsr223.GroovyScriptEngineImpl
@@ -26,7 +25,7 @@ class GremlinGroovyTest {
 
     @Test
     public void shouldHideAndUnhideKeys() {
-        GremlinLoader.load();
+        //GremlinLoader.load();
         assertEquals(Graph.Key.hide("g"), -"g");
         assertEquals("g", -Graph.Key.hide("g"));
         assertEquals("g", -(-"g"));
