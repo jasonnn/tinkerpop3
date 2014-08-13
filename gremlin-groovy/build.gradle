@@ -3,14 +3,14 @@ description = 'Gremlin Groovy: Gremlin for the Groovy Language'
 apply plugin: 'groovy'
 
 sourceSets {
-    main {
+  //  main {
        // groovy.srcDirs=[]
 //        groovy {
 //            srcDir 'src/main/java'
 //            srcDir 'src/main/groovy'
 //        }
 //        java.srcDirs = []
-    }
+  //  }
     test {
         groovy {
             srcDir 'src/test/java'

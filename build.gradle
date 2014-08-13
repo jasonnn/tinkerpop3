@@ -8,6 +8,7 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: "jacoco"
     sourceCompatibility = 1.8
     targetCompatibility = 1.8
 
@@ -33,6 +34,7 @@ subprojects {
 
 
 }
+apply plugin: 'build-dashboard'
 //apply plugin: 'idea'
 idea {
     project {
