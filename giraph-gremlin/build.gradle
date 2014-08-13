@@ -1,23 +1,23 @@
 description = 'Giraph Gremlin: An Implementation of TinkerPop3 for the Giraph Graph Processing System'
 
-apply plugin: 'groovy'
-
-sourceSets {
-    main {
-        groovy {
-            srcDir 'src/main/java'
-            srcDir 'src/main/groovy'
-        }
-        java.srcDirs = []
-    }
-    test {
-        groovy {
-            srcDir 'src/test/java'
-            srcDir 'src/test/groovy'
-        }
-        java.srcDirs = []
-    }
-}
+//apply plugin: 'groovy'
+//
+//sourceSets {
+//    main {
+//        groovy {
+//            srcDir 'src/main/java'
+//            srcDir 'src/main/groovy'
+//        }
+//        java.srcDirs = []
+//    }
+//    test {
+//        groovy {
+//            srcDir 'src/test/java'
+//            srcDir 'src/test/groovy'
+//        }
+//        java.srcDirs = []
+//    }
+//}
 
 dependencies {
     compile project(':gremlin-core')
