@@ -1,8 +1,9 @@
 allprojects {
     apply plugin: 'maven'
-
+    apply plugin: 'idea'
     group = 'com.tinkerpop'
     version = '3.0.0-SNAPSHOT'
+
 }
 
 subprojects {
@@ -31,4 +32,11 @@ subprojects {
     }
 
 
+}
+//apply plugin: 'idea'
+idea {
+    project {
+        jdkName = '1.8'
+        languageLevel = '1.8'
+    }
 }
